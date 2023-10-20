@@ -55,7 +55,11 @@ workflows:
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID # Alphanumeric value that identifies who created the API key, can also reference environment variable such as $APP_STORE_CONNECT_ISSUER_ID
       email:
         recipients:
+<<<<<<< HEAD
           - unasivp@hotmail.com
+=======
+          - user1@example.com
+>>>>>>> 8573ff2d2d9cf1856141f55181dcea2bd40904c5
         notify:
           success: true
           failure: true
@@ -121,7 +125,11 @@ workflows:
     publishing:
       email:
         recipients:
+<<<<<<< HEAD
           - unasivp@hotmail.com
+=======
+          - user1@example.com
+>>>>>>> 8573ff2d2d9cf1856141f55181dcea2bd40904c5
         notify:
           success: true
           failure: true
@@ -183,7 +191,11 @@ workflows:
     publishing:
       email:
         recipients:
+<<<<<<< HEAD
           - unasivp@hotmail.com
+=======
+          - user1@example.com
+>>>>>>> 8573ff2d2d9cf1856141f55181dcea2bd40904c5
         notify:
           success: true
           failure: true
@@ -315,7 +327,11 @@ workflows:
       # See the following link for details about email publishing - https://docs.codemagic.io/publishing-yaml/distribution/#email
       email:
         recipients:
+<<<<<<< HEAD
           - unasivp@gmail.com
+=======
+          - user_1@example.com
+>>>>>>> 8573ff2d2d9cf1856141f55181dcea2bd40904c5
         notify:
           success: true # To receive a notification when a build succeeds
           failure: false # To not receive a notification when a build fails
@@ -393,8 +409,13 @@ workflows:
     publishing:
       email:
         recipients:
+<<<<<<< HEAD
           - unasivp@gmail.com
           - unasivp@hotmail.com
+=======
+          - user_1@example.com
+          - user_2@example.com
+>>>>>>> 8573ff2d2d9cf1856141f55181dcea2bd40904c5
         notify:
           success: true
           failure: true
@@ -464,8 +485,13 @@ workflows:
     publishing:
       email:
         recipients:
+<<<<<<< HEAD
           - unasivp@gmail.com
           - unasivp@hotmail.com
+=======
+          - user_1@example.com
+          - user_2@example.com
+>>>>>>> 8573ff2d2d9cf1856141f55181dcea2bd40904c5
         notify:
           success: true
           failure: true
@@ -534,8 +560,13 @@ workflows:
       # See the following link for details about email publishing - https://docs.codemagic.io/publishing-yaml/distribution/#email
       email:
         recipients:
+<<<<<<< HEAD
           - unasivp@gmail.com
           - unasivp@hotmail.com
+=======
+          - user_1@example.com
+          - user_2@example.com
+>>>>>>> 8573ff2d2d9cf1856141f55181dcea2bd40904c5
         notify:
           success: true # To not receive a notification when a build succeeds
           failure: false # To not receive a notification when a build fails
@@ -623,8 +654,13 @@ workflows:
     publishing:
       email:
         recipients:
+<<<<<<< HEAD
           - unasivp@gmail.com
           - unasivp@hotmail.com
+=======
+          - user_1@example.com
+          - user_2@example.com
+>>>>>>> 8573ff2d2d9cf1856141f55181dcea2bd40904c5
         notify:
           success: true
           failure: false
