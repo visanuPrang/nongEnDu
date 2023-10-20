@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "934963044297",
+    "project_id": "nong-endu",
+    "storage_bucket": "nong-endu.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:934963044297:android:33803ba51a5cefc0a41218",
+        "android_client_info": {
+          "package_name": "com.example.nongendu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqTGLdh6Qj0PyKGaolMd5VamJyu0D8GpI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
