@@ -199,7 +199,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               } else {
                 return const Center(
-                  child: CircularProgressIndicator(),
+                  child: CircularProgressIndicator(
+                    backgroundColor: Color.fromARGB(255, 102, 82, 82),
+                    color: Color.fromARGB(255, 250, 237, 224),
+                  ),
                 );
               }
             }),
