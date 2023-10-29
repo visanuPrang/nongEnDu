@@ -59,9 +59,18 @@ class MyApp extends StatelessWidget {
 // Release ID
 // amzn1.devportal.apprelease.183c85b17e534a989029cdcc398c2977
 
-// → 1. git init
+// create/upload new project to git/github
+// Step-1 Create a Flutter Project
+// Step-2 Open Terminal
+// Step-3 Step by step all commands to upload project remotely.// → 1. git init
 // → 2. git add .
 // → 3. git commit -m "description"
 // → 4. git branch -M branchName
 // → 5. git remote add origin https://github.com/visanuPrang/nongEnDu.git
 // → 6. git push -u origin branchName
+
+// Add modified files to that remote project;
+// Step-1 Step by step 3 commands to upload modified files/folders.
+// → 1. git add .
+// → 2. git commit -m "description"
+// → 3. git push -u origin branchName
