@@ -354,22 +354,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               var urlApi1 =
                                   'https://script.google.com/macros/s/AKfycbx4yW34Z3d91J8Y_pCYJ3lk82ZwmeTGrS_GmgcCthHf-CcsQdDp_kSJN0H3Nh6q3b6RZg/exec';
                               final response = await Dio().get(urlApi1);
-                              debugPrint('-----${response.data}-----');
+                              debugPrint('-----${response.data.length}-----');
                               var xData = [];
                               parentsName = '';
-                              for (var i = 0; i < 6; i++) {
+                              for (var i = 0; i < response.data.length; i++) {
                                 xData.add(response.data[i]['No'].toString());
+                                debugPrint(
+                                    '-----${response.data[i]['No']}-----');
                                 if (response.data[i]['No'] == realEmail) {
                                   parentsName = response.data[i]['Name'];
                                 }
                               }
                               userFound = xData.contains(realEmail);
-                              debugPrint(
-                                  '------------------- $userFound ------------------');
-                              debugPrint(
-                                  '------------------- $xData ------------------');
-                              debugPrint(
-                                  '------------------- $realEmail ------------------');
                               profile.eMail =
                                   '$userType$school@com.com@com.com';
                               if (formKey.currentState!.validate() &&
