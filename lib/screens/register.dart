@@ -354,6 +354,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               var urlApi1 =
                                   'https://script.google.com/macros/s/AKfycbx4yW34Z3d91J8Y_pCYJ3lk82ZwmeTGrS_GmgcCthHf-CcsQdDp_kSJN0H3Nh6q3b6RZg/exec';
                               final response = await Dio().get(urlApi1);
+                              debugPrint('-----${response.data}-----');
                               debugPrint('-----${response.data.length}-----');
                               var xData = [];
                               parentsName = '';
