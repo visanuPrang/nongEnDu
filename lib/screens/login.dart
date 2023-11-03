@@ -1,5 +1,5 @@
-// ignore_for_file: use_build_context_synchronously, unused_import, unused_local_variable
-import 'dart:io';
+// ignore_for_file: use_build_context_synchronously, unused_local_variable
+// import 'dart:io';
 
 import 'package:bordered_text/bordered_text.dart';
 import 'package:dio/dio.dart';
@@ -7,15 +7,15 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:nongendu/json/about.dart';
-import 'package:nongendu/json/user_json.dart';
+// import 'package:nongendu/json/about.dart';
+// import 'package:nongendu/json/user_json.dart';
 import 'package:nongendu/student_pages/main_student.dart';
 import 'package:nongendu/screens/home.dart';
 import 'package:nongendu/models/profile.dart';
 import 'package:nongendu/database/user_db.dart';
 import 'package:nongendu/variables.dart';
-import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
+// import 'package:path/path.dart';
+// import 'package:sqflite/sqflite.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
