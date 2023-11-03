@@ -461,6 +461,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                     variables.passUserName = userName;
                                     variables.passUserType = userType;
                                     variables.passUserId = userId;
+                                    // if (userId == 'T') {
+                                    //   screenPagePS = 'หน้าหลักคุณครู';
+                                    //   Navigator.pushReplacement(context,
+                                    //       MaterialPageRoute(builder: (context) {
+                                    //     return MainStudentPage();
+                                    //   }));
+                                    // }
                                     screenPagePS = 'หน้าหลักนักเรียน';
                                     Navigator.pushReplacement(context,
                                         MaterialPageRoute(builder: (context) {
