@@ -72,5 +72,5 @@ class MyApp extends StatelessWidget {
 // Add modified files to that remote project;
 // Step-1 Step by step 3 commands to upload modified files/folders.
 // → 1. git add .
-// → 2. git commit -m "description"
+// → 2. git commit -m "description of this commit"
 // → 3. git push -u origin branchName
