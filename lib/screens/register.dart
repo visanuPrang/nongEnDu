@@ -40,6 +40,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return FutureBuilder(
       future: firebase,
       builder: (context, AsyncSnapshot<FirebaseApp> snapshot) {
+        debugPrint("snapshot.data ${snapshot.data?.name}");
+        debugPrint("snapshot.error ${snapshot.error}");
         if (snapshot.hasError) {
           return Scaffold(
             appBar: AppBar(

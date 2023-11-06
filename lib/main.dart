@@ -74,3 +74,28 @@ class MyApp extends StatelessWidget {
 // → 1. git add .
 // → 2. git commit -m "description of this commit"
 // → 3. git push -u origin branchName
+
+// function doGet(req) {
+//   var doc = SpreadsheetApp.getActiveSpreadsheet();
+//   var sheet = doc.getSheetByName('teacher');
+//   var values = sheet.getDataRange().getValues();
+
+//   var output = [];
+
+//   for(var i=0;i<values.length;i++) {
+//     if(i==0) {
+//       continue;
+//     }
+//     var row={};
+//     for(j=0;j<100;j++){
+//       if(!values[i][j]) {
+//         break;
+//       }
+//       row[values[0][j]]=values[i][j];
+//           }
+//           output.push(row);
+//           delete row;
+
+//   }
+//   return ContentService.createTextOutput(JSON.stringify(output)).setMimeType(ContentService.MimeType.JSON);
+// }
