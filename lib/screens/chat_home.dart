@@ -42,16 +42,17 @@ class _ChatHomePageState extends State<ChatHomePage>
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   late int _selectedIndex = 0;
+  var pageName = ['User List.', 'Group List.'];
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    setStatus("Online");
+    setStatus('Online');
   }
 
   void setStatus(String status) async {
     await _firestore.collection('users').doc(_auth.currentUser!.uid).update({
-      "status": status,
+      'status': status,
     });
   }
 
@@ -59,10 +60,10 @@ class _ChatHomePageState extends State<ChatHomePage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       // online
-      setStatus("Online");
+      setStatus('Online');
     } else {
       // offline
-      setStatus("Offline");
+      setStatus('Offline');
     }
   }
 
@@ -84,12 +85,23 @@ class _ChatHomePageState extends State<ChatHomePage>
             }));
           },
         ),
-        title: const Text(
-          'Main chat page.',
-          style: TextStyle(
-              color: Colors.white70, fontSize: 20, fontWeight: FontWeight.bold),
+        title: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            const Text(
+              'Main chat page.',
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+            Text(
+              pageName[_selectedIndex],
+              style: const TextStyle(color: Colors.white70, fontSize: 20),
+            ),
+          ],
         ),
-        centerTitle: true,
+        centerTitle: false,
         actions: <Widget>[
           IconButton(
             icon: const Icon(
@@ -179,6 +191,7 @@ class _ChatHomePageState extends State<ChatHomePage>
           },
           items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(
+              tooltip: 'Person',
               icon: Icon(Icons.person),
               label: 'Person',
             ),

@@ -28,6 +28,15 @@ class _GroupListState extends State<GroupList> {
     getAvailableGroups();
   }
 
+  noPhoto(xName) {
+    String initial = '';
+    var splitName = xName.split(' ');
+    splitName.length > 1
+        ? initial = splitName[0].substring(0, 1) + splitName[1].substring(0, 1)
+        : initial = splitName[0].substring(0, 1).toUpperCase();
+    return initial;
+  }
+
   getCurrentUserDetails() async {
     currUser.clear();
     await _firestore
@@ -36,11 +45,11 @@ class _GroupListState extends State<GroupList> {
         .get()
         .then((map) {
       currUser.add({
-        "Name": map['Name'],
-        "E-mail": map['E-mail'],
-        "uid": map['Id'],
-        "Photo": map['Photo'],
-        "isAdmin": true,
+        'Name': map['Name'],
+        'E-mail': map['E-mail'],
+        'uid': map['Id'],
+        'Photo': map['Photo'],
+        'isAdmin': true,
       });
     });
   }
@@ -66,111 +75,133 @@ class _GroupListState extends State<GroupList> {
     final Size size = MediaQuery.of(context).size;
 
     return Scaffold(
-      body: isLoading
-          ? Container(
-              height: size.height,
-              width: size.width,
-              alignment: Alignment.center,
-              child: const CircularProgressIndicator(),
-            )
-          : groupList.isEmpty
-              ? Center(
-                  child: Container(
-                    height: MediaQuery.of(context).size.height * 0.2,
-                    width: MediaQuery.of(context).size.width * 0.95,
-                    decoration: const BoxDecoration(
-                        color: Color.fromARGB(255, 95, 57, 167),
-                        borderRadius: BorderRadius.all(Radius.circular(30))),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      textAlign: TextAlign.center,
-                      'Not a member in any group.\nTo create group click on "+" button below.',
-                      style: TextStyle(
-                          fontSize: 19,
-                          color: Color.fromARGB(255, 181, 170, 201)),
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: groupList.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => GroupChatRoom(
-                                groupName: groupList[index]['Name'],
-                                groupChatId: groupList[index]['Id'],
-                                currUser: '$currUser')),
+      body: Container(
+        height: MediaQuery.of(context).size.height,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        width: MediaQuery.of(context).size.width,
+        decoration: const BoxDecoration(
+          // color: Color.fromARGB(255, 248, 214, 114),
+          image: DecorationImage(
+              opacity: 0.15,
+              image: AssetImage("images/NongEnDu_Tran.png"),
+              // image: NetworkImage(
+              //     'https://img.freepik.com/premium-vector/cute-little-student-girl-cartoon_96373-287.jpg'),
+              fit: BoxFit.cover),
+        ),
+        child: isLoading
+            ? Container(
+                height: size.height,
+                width: size.width,
+                alignment: Alignment.center,
+                child: const CircularProgressIndicator(),
+              )
+            : groupList.isEmpty
+                ? Center(
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.2,
+                      width: MediaQuery.of(context).size.width * 0.95,
+                      decoration: const BoxDecoration(
+                          color: Color.fromARGB(255, 95, 57, 167),
+                          borderRadius: BorderRadius.all(Radius.circular(30))),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        textAlign: TextAlign.center,
+                        'Not a member in any group.\nTo create group click on "+" button below.',
+                        style: TextStyle(
+                            fontSize: 19,
+                            color: Color.fromARGB(255, 181, 170, 201)),
                       ),
-                      leading: groupList[index]['Photo'].toString().isEmpty ||
-                              groupList[index]['Photo'].length == 0
-                          ? Container(
-                              alignment: Alignment.center,
-                              height: 45,
-                              width: 45,
-                              decoration: const BoxDecoration(
-                                  color: Color.fromARGB(255, 192, 163, 245),
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(30))),
-                              child: const Icon(
-                                Icons.group,
-                                size: 30,
-                              ))
-                          : Container(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(30),
-                                child: Image.network(
-                                  groupList[index]['Photo'],
-                                  height: 40,
-                                  width: 40,
-                                  fit: BoxFit.cover,
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: groupList.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => GroupChatRoom(
+                                  groupName: groupList[index]['Name'],
+                                  groupChatId: groupList[index]['Id'],
+                                  currUser: '$currUser')),
+                        ),
+                        leading: groupList[index]['Photo'].toString().isEmpty ||
+                                groupList[index]['Photo'].length == 0
+                            ? Container(
+                                alignment: Alignment.center,
+                                height: 40,
+                                width: 40,
+                                decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(30))),
+                                child: Text(
+                                  noPhoto(groupList[index]['Name']),
+                                  style: const TextStyle(
+                                      fontSize: 23,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color.fromARGB(255, 19, 47, 94)),
+                                ))
+                            : Container(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(30),
+                                  child: Image.network(
+                                    groupList[index]['Photo'],
+                                    height: 40,
+                                    width: 40,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(groupList[index]['Name']),
+                            ),
+                          ],
+                        ),
+                        subtitle: Text("Owner: ${groupList[index]['Admin']}"),
+                        trailing: Container(
+                          height: 40,
+                          width: 40,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color.fromARGB(255, 95, 57, 167),
+                            // borderRadius: BorderRadius.all(Radius.circular(20)),
+                          ),
+                          child: IconButton(
+                            color: Colors.amber,
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => GroupMaintenance(
+                                  groupName: groupList[index]['Name'],
+                                  groupId: groupList[index]['Id'],
                                 ),
                               ),
                             ),
-                      title: Row(
-                        children: [
-                          Expanded(
-                            child: Text(groupList[index]['Name']),
+                            icon: const Icon(Icons.edit, size: 20),
                           ),
-                        ],
-                      ),
-                      subtitle: Text("Owner: ${groupList[index]['Admin']}"),
-                      trailing: Container(
-                        height: 40,
-                        width: 40,
-                        decoration: const BoxDecoration(
-                            color: Color.fromARGB(255, 95, 57, 167),
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(30))),
-                        child: IconButton(
-                          color: Colors.amber,
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => GroupMaintenance(
-                                groupName: groupList[index]['Name'],
-                                groupId: groupList[index]['Id'],
-                              ),
-                            ),
-                          ),
-                          icon: const Icon(Icons.edit, size: 20),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: DraggableFab(
         securityBottom: 110,
         child: FloatingActionButton(
           mini: false,
-          shape: const CircleBorder(side: BorderSide.none),
-          backgroundColor: const Color.fromARGB(255, 110, 167, 57),
+          shape: const CircleBorder(
+              side: BorderSide(
+                  width: 6,
+                  color: Color.fromRGBO(82, 170, 94, 1.0),
+                  strokeAlign: BorderSide.strokeAlignInside)),
+          backgroundColor: Colors.white,
+          tooltip: "Create Group",
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => const CreateNewGroup(),
             ),
           ),
-          tooltip: "Create Group",
           child: Container(
             height: 45,
             width: 45,
@@ -183,7 +214,16 @@ class _GroupListState extends State<GroupList> {
                   builder: (_) => const CreateNewGroup(),
                 ),
               ),
-              icon: const Icon(Icons.add, size: 25),
+              icon: Text(
+                String.fromCharCode(Icons.add.codePoint),
+                style: TextStyle(
+                  color: const Color.fromARGB(255, 2, 42, 7),
+                  inherit: false,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  fontFamily: Icons.add.fontFamily,
+                ),
+              ),
             ),
           ),
         ),

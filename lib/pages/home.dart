@@ -159,17 +159,32 @@ class _HomeState extends State<Home> {
         floatingActionButton: DraggableFab(
           securityBottom: 110,
           child: FloatingActionButton(
-              shape: const CircleBorder(side: BorderSide.none),
-              backgroundColor: const Color.fromRGBO(82, 170, 94, 1.0),
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const SearchPage())),
+              shape: const CircleBorder(
+                side: BorderSide(
+                    width: 6,
+                    color: Color.fromRGBO(82, 170, 94, 1.0),
+                    strokeAlign: BorderSide.strokeAlignInside),
+              ),
+              backgroundColor: Colors.white70,
               tooltip: 'Search.',
-              onPressed: () {
-                Navigator.push(
+              child: IconButton(
+                onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => const SearchPage()));
-              },
-              child: const Icon(Icons.person_search_outlined,
-                  size: 30, color: Colors.white)),
+                        builder: (context) => const SearchPage())),
+                icon: Text(
+                  String.fromCharCode(Icons.person_search_outlined.codePoint),
+                  style: TextStyle(
+                    color: const Color.fromARGB(255, 2, 42, 7),
+                    inherit: false,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    fontFamily: Icons.person_search_outlined.fontFamily,
+                  ),
+                ),
+              )),
         ),
         backgroundColor: const Color.fromARGB(255, 231, 225, 236),
         body:

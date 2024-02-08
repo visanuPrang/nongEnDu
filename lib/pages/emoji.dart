@@ -6,15 +6,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:messagingapp/group_chats/group_chat_room.dart';
 import 'package:messagingapp/pages/chatpage.dart';
 import 'package:messagingapp/service/database.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:random_string/random_string.dart';
 import 'package:screenshot/screenshot.dart';
-
-/// Flutter code sample for [EditableText.onContentInserted].
-
-// void main() => runApp( KeyboardInsertedContentApp());
 
 class KeyboardInsertedContentApp extends StatefulWidget {
   final String type, name, profileurl, username, page, chatRoomId, myProfilePic;
@@ -27,17 +24,6 @@ class KeyboardInsertedContentApp extends StatefulWidget {
       required this.page,
       required this.chatRoomId,
       required this.myProfilePic});
-
-  // @override
-  // Widget build(BuildContext context) {
-  //   return const MaterialApp(
-  //     home: KeyboardInsertedContentDemo(),
-  //   );
-  // }
-// }
-
-// class KeyboardInsertedContentDemo extends StatefulWidget {
-//   const KeyboardInsertedContentDemo({super.key});
 
   @override
   State<KeyboardInsertedContentApp> createState() =>
@@ -71,9 +57,10 @@ class _KeyboardInsertedContentAppState
               ? Screenshot(
                   controller: screenshotController,
                   child: Container(
+                    color: Colors.amber,
                     alignment: Alignment.topCenter,
-                    width: MediaQuery.of(context).size.width * 0.4,
-                    height: MediaQuery.of(context).size.height * 0.4,
+                    width: 120, //MediaQuery.of(context).size.width * 0.4,
+                    height: 120, // MediaQuery.of(context).size.height * 0.4,
                     child:
                         Image.memory(bytes!, fit: BoxFit.contain, scale: 0.7),
                   ),
@@ -118,12 +105,18 @@ class _KeyboardInsertedContentAppState
                     // ignore: use_build_context_synchronously
                     Navigator.pushReplacement(context,
                         MaterialPageRoute(builder: (context) {
-                      return ChatPage(
-                          name: widget.name,
-                          page: widget.page,
-                          profileurl: widget.profileurl,
-                          type: widget.type,
-                          username: widget.username);
+                      return widget.type == 'Person'
+                          ? ChatPage(
+                              name: widget.name,
+                              page: widget.page,
+                              profileurl: widget.profileurl,
+                              type: widget.type,
+                              username: widget.username)
+                          : GroupChatRoom(
+                              groupName: widget.name,
+                              groupChatId: widget.chatRoomId,
+                              currUser: widget.username,
+                            );
                     }));
                   });
                 },

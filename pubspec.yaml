@@ -60,7 +60,6 @@ dependencies:
   keyboard_emoji_picker: ^1.0.3
   screenshot: ^2.1.0
   easy_image_viewer: ^1.4.0
-  image_viewer: ^1.5.0
 
 dev_dependencies:
   flutter_test:

@@ -93,11 +93,11 @@ class _CreateNewGroupState extends State<CreateNewGroup> {
     if (!isAlreadyExist) {
       setState(() {
         membersList.add({
-          "Name": userMap!['Name'],
-          "E-mail": userMap!['E-mail'],
-          "uid": userMap!['Id'],
-          "Photo": userMap!['Photo'],
-          "isAdmin":
+          'Name': userMap!['Name'],
+          'E-mail': userMap!['E-mail'],
+          'uid': userMap!['Id'],
+          'Photo': userMap!['Photo'],
+          'isAdmin':
               _auth.currentUser!.uid == userMap!['Id'] ? 'Admin' : 'Member',
         });
 
@@ -121,7 +121,7 @@ class _CreateNewGroupState extends State<CreateNewGroup> {
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
-        title: const Text("Create new group."),
+        title: const Text('Create new group.'),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -206,19 +206,30 @@ class _CreateNewGroupState extends State<CreateNewGroup> {
                     )
                   : const SizedBox(),
             SizedBox(height: size.height * 0.005),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  side: const BorderSide(
-                      width: 1, color: Color.fromARGB(255, 95, 57, 167)),
-                  backgroundColor: const Color.fromARGB(255, 220, 212, 245),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-                  textStyle: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
-                  shadowColor: const Color.fromARGB(255, 71, 58, 96),
-                  elevation: 5),
-              onPressed: onSearch,
-              child: const Text("Search"),
+            SizedBox(
+              width: MediaQuery.of(context).size.width * 0.4,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18.0)),
+                    side: const BorderSide(
+                        width: 2, color: Color.fromARGB(255, 95, 57, 167)),
+                    backgroundColor: const Color.fromARGB(255, 220, 212, 245),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 25, vertical: 10),
+                    textStyle: const TextStyle(
+                        color: Color.fromARGB(255, 95, 57, 167),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
+                    shadowColor: const Color.fromARGB(255, 71, 58, 96),
+                    elevation: 5),
+                onPressed: onSearch,
+                child: const Text('Search',
+                    style: TextStyle(
+                        color: Color.fromARGB(255, 36, 12, 79),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold)),
+              ),
             ),
             Flexible(
               child: ListView.builder(
@@ -280,16 +291,16 @@ class _CreateNewGroupState extends State<CreateNewGroup> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
       floatingActionButton: membersList.length >= 2
           ? FloatingActionButton(
-              backgroundColor: const Color.fromARGB(255, 66, 7, 202),
+              backgroundColor: Colors.white,
               tooltip: 'Create group.',
-              shape: const CircleBorder(side: BorderSide.none),
-              child: Container(
-                height: 45,
-                width: 45,
-                decoration: const BoxDecoration(
-                    color: Color.fromRGBO(255, 255, 255, 1),
-                    borderRadius: BorderRadius.all(Radius.circular(30))),
-                child: const Icon(Icons.forward),
+              shape: const CircleBorder(
+                  side: BorderSide(
+                      width: 6,
+                      color: Color.fromARGB(255, 66, 7, 202),
+                      strokeAlign: BorderSide.strokeAlignInside)),
+              child: const Icon(
+                Icons.forward,
+                color: Color.fromRGBO(14, 54, 19, 1),
               ),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(

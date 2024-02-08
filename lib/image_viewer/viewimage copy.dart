@@ -1,6 +1,6 @@
 import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'package:flutter/material.dart';
-import 'package:messagingapp/screens/chat_home.dart';
+import 'package:messagingapp/image_viewer/async_demo_page.dart';
 
 void main() => runApp(const MyApp());
 
@@ -17,14 +17,17 @@ class MyApp extends StatelessWidget {
             const ProgressIndicatorThemeData(color: Colors.green),
         primarySwatch: Colors.blue,
       ),
-      home: const ImageViewer(),
+      home: const ImageViewer(title: 'EasyImageViewer Demo'),
     );
   }
 }
 
 class ImageViewer extends StatefulWidget {
+  final String title;
+
   const ImageViewer({
     Key? key,
+    required this.title,
   }) : super(key: key);
 
   @override
@@ -37,14 +40,10 @@ class _ImageViewerState extends State<ImageViewer> {
   static const _kCurve = Curves.ease;
 
   final List<ImageProvider> _imageProviders = [
-    const NetworkImage(
-        "https://firebasestorage.googleapis.com/v0/b/messagingapp-ac1d6.appspot.com/o/images%2FP01%20EnDu%20School_P02%20EnDu%20School%2F014z9Pq898.webp?alt=media&token=b6b18bdc-68e1-462b-9f10-3e758cb19a04"),
-    const NetworkImage(
-        "https://firebasestorage.googleapis.com/v0/b/messagingapp-ac1d6.appspot.com/o/images%2FP01%20EnDu%20School_P02%20EnDu%20School%2Fe17z902082.jpg?alt=media&token=ed76e206-645d-4cbe-bedc-d339801b4bb1"),
-    const NetworkImage(
-        "https://firebasestorage.googleapis.com/v0/b/messagingapp-ac1d6.appspot.com/o/images%2FP01%20EnDu%20School_P02%20EnDu%20School%2F2332666898.png?alt=media&token=d75bbc7f-dd93-45bc-ab2d-b4493d893657"),
-    const NetworkImage(
-        "https://firebasestorage.googleapis.com/v0/b/messagingapp-ac1d6.appspot.com/o/images%2FP01%20EnDu%20School_P02%20EnDu%20School%2FUNHZHSrGYY.png?alt=media&token=10ee1b59-f876-4f98-9791-0e804a26d746")
+    const NetworkImage("https://picsum.photos/id/1001/4912/3264"),
+    const NetworkImage("https://picsum.photos/id/1003/1181/1772"),
+    const NetworkImage("https://picsum.photos/id/1004/4912/3264"),
+    const NetworkImage("https://picsum.photos/id/1005/4912/3264")
   ];
 
   late final _easyEmbeddedImageProvider = MultiImageProvider(_imageProviders);
@@ -52,25 +51,23 @@ class _ImageViewerState extends State<ImageViewer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+      ),
       body: Center(
           child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton(
-            icon: Icon(Icons.close),
-            onPressed: () => Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => const ChatHomePage())),
-          ),
           ElevatedButton(
               child: const Text("Custom Progress Indicator"),
               onPressed: () {
                 CustomImageWidgetProvider customImageProvider =
                     CustomImageWidgetProvider(
                   imageUrls: [
-                    "https://firebasestorage.googleapis.com/v0/b/messagingapp-ac1d6.appspot.com/o/images%2FP01%20EnDu%20School_P02%20EnDu%20School%2F014z9Pq898.webp?alt=media&token=b6b18bdc-68e1-462b-9f10-3e758cb19a04",
-                    "https://firebasestorage.googleapis.com/v0/b/messagingapp-ac1d6.appspot.com/o/images%2FP01%20EnDu%20School_P02%20EnDu%20School%2Fe17z902082.jpg?alt=media&token=ed76e206-645d-4cbe-bedc-d339801b4bb1",
-                    "https://firebasestorage.googleapis.com/v0/b/messagingapp-ac1d6.appspot.com/o/images%2FP01%20EnDu%20School_P02%20EnDu%20School%2F2332666898.png?alt=media&token=d75bbc7f-dd93-45bc-ab2d-b4493d893657",
-                    "https://firebasestorage.googleapis.com/v0/b/messagingapp-ac1d6.appspot.com/o/images%2FP01%20EnDu%20School_P02%20EnDu%20School%2FUNHZHSrGYY.png?alt=media&token=10ee1b59-f876-4f98-9791-0e804a26d746"
+                    "https://picsum.photos/id/1001/4912/3264",
+                    "https://picsum.photos/id/1003/1181/1772",
+                    "https://picsum.photos/id/1004/4912/3264",
+                    "https://picsum.photos/id/1005/4912/3264"
                   ].toList(),
                 );
                 showImageViewerPager(context, customImageProvider);

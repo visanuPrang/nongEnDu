@@ -3,15 +3,14 @@ import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:messagingapp/image_viewer/viewimage.dart';
 import 'package:messagingapp/pages/emoji.dart';
-import 'package:messagingapp/pages/emuji1.dart';
 import 'package:messagingapp/pages/searchpage.dart';
 import 'package:messagingapp/pages/signin.dart';
 import 'package:messagingapp/pages/temp_screen.dart';
@@ -21,6 +20,68 @@ import 'package:random_string/random_string.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
+// Image view start here
+class CustomImageProvider extends EasyImageProvider {
+  @override
+  final int initialIndex;
+  final List<String> imageUrls;
+
+  CustomImageProvider({required this.imageUrls, this.initialIndex = 0})
+      : super();
+
+  @override
+  ImageProvider<Object> imageBuilder(BuildContext context, int index) {
+    return NetworkImage(imageUrls[index]);
+  }
+
+  @override
+  int get imageCount => imageUrls.length;
+}
+
+class CustomImageWidgetProvider extends EasyImageProvider {
+  @override
+  final int initialIndex;
+  final List<String> imageUrls;
+
+  CustomImageWidgetProvider({required this.imageUrls, this.initialIndex = 0})
+      : super();
+
+  @override
+  ImageProvider<Object> imageBuilder(BuildContext context, int index) {
+    return NetworkImage(imageUrls[index]);
+  }
+
+  @override
+  Widget progressIndicatorWidgetBuilder(BuildContext context, int index,
+      {double? value}) {
+    // Create a custom linear progress indicator
+    // with a label showing the progress value
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: MediaQuery.of(context).size.width * 0.7,
+          child: LinearProgressIndicator(
+            value: value,
+          ),
+        ),
+        Text(
+          "${(value ?? 0) * 100}%",
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        )
+      ],
+    );
+  }
+
+  @override
+  int get imageCount => imageUrls.length;
+}
+
+// -------------------- end --------------------
 class ChatPage extends StatefulWidget {
   final String type, name, profileurl, username, page;
   const ChatPage(
@@ -38,15 +99,16 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  // final FirebaseStorage _storage = FirebaseStorage.instance;
   TextEditingController messagecontroller = TextEditingController();
   final TextEditingController _controller = TextEditingController();
   Uint8List? bytes;
   Stream? messageStream;
   late String newMessageId;
   String? myUsername, myProfilePic, myName, myEmail, messageId, chatRoomId;
-  int inputType = 1; //1-text 2-emoji 3-image 4-file 5-camara
   bool _isUploading = false, _showMore = false;
+  List<String> imageUrls = [];
+  List<String> imageSenders = [];
+  double value = 0;
 
   double x = 0.0;
   double y = 0.0;
@@ -108,52 +170,52 @@ class _ChatPageState extends State<ChatPage> {
     return '${nameArray[0]}_${nameArray[1]}';
   }
 
-  viewImage(imageFile) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          content: Stack(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                },
-                child: SizedBox(
-                    width: MediaQuery.of(context).size.width,
-                    height: MediaQuery.of(context).size.height,
-                    child: CachedNetworkImage(
-                      fit: BoxFit.contain,
-                      imageUrl: imageFile,
-                      imageBuilder: (context, imageProvider) => Container(
-                        decoration: BoxDecoration(
-                          borderRadius:
-                              const BorderRadius.all(Radius.circular(10)),
-                          image: DecorationImage(
-                            image: imageProvider,
-                          ),
-                        ),
-                      ),
-                      placeholder: (context, url) => Container(
-                          width: 35,
-                          height: 35,
-                          decoration:
-                              const BoxDecoration(shape: BoxShape.circle),
-                          child:
-                              const CircularProgressIndicator(strokeWidth: 3)),
-                      errorWidget: (context, url, error) =>
-                          const Icon(Icons.error),
-                    )),
-              ),
-            ],
-          ),
-          insetPadding: EdgeInsets.zero,
-          contentPadding: EdgeInsets.zero,
-          // clipBehavior: Clip.antiAliasWithSaveLayer,
-        );
-      },
-    );
-  }
+  // viewImage(imageFile) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (ctx) {
+  //       return AlertDialog(
+  //         content: Stack(
+  //           children: [
+  //             GestureDetector(
+  //               onTap: () {
+  //                 Navigator.pop(context);
+  //               },
+  //               child: SizedBox(
+  //                   width: MediaQuery.of(context).size.width,
+  //                   height: MediaQuery.of(context).size.height,
+  //                   child: CachedNetworkImage(
+  //                     fit: BoxFit.contain,
+  //                     imageUrl: imageFile,
+  //                     imageBuilder: (context, imageProvider) => Container(
+  //                       decoration: BoxDecoration(
+  //                         borderRadius:
+  //                             const BorderRadius.all(Radius.circular(10)),
+  //                         image: DecorationImage(
+  //                           image: imageProvider,
+  //                         ),
+  //                       ),
+  //                     ),
+  //                     placeholder: (context, url) => Container(
+  //                         width: 35,
+  //                         height: 35,
+  //                         decoration:
+  //                             const BoxDecoration(shape: BoxShape.circle),
+  //                         child:
+  //                             const CircularProgressIndicator(strokeWidth: 3)),
+  //                     errorWidget: (context, url, error) =>
+  //                         const Icon(Icons.error),
+  //                   )),
+  //             ),
+  //           ],
+  //         ),
+  //         insetPadding: EdgeInsets.zero,
+  //         contentPadding: EdgeInsets.zero,
+  //         // clipBehavior: Clip.antiAliasWithSaveLayer,
+  //       );
+  //     },
+  //   );
+  // }
 
   Future<void> _launchUrl(pdfFile) async {
     final Uri url = Uri.parse(pdfFile);
@@ -162,8 +224,16 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  Widget chatMessageTile(String message, bool sendByMe, String ts, String read,
-      String type, String alias, String status, String statusTime) {
+  Widget chatMessageTile(
+      String message,
+      String sendBy,
+      bool sendByMe,
+      String ts,
+      String read,
+      String type,
+      String alias,
+      String status,
+      String statusTime) {
     String buffName = alias, tfName = '';
     if (buffName.length > 30) {
       while (buffName.length > 26) {
@@ -294,7 +364,7 @@ class _ChatPageState extends State<ChatPage> {
                         minWidth: 0.0,
                         minHeight: 0.0,
                         maxWidth: 250.0,
-                        maxHeight: 100.0,
+                        // maxHeight: 100.0,
                       ),
                       child: Text(
                         message,
@@ -311,10 +381,15 @@ class _ChatPageState extends State<ChatPage> {
                 : type == 'image'
                     ? GestureDetector(
                         onTap: () {
-                          const ImageViewer(
-                            title: 'view image',
-                          );
-                          // viewImage(message);
+                          final reverseUrls = imageUrls.reversed.toList();
+                          final curPicId = reverseUrls
+                              .indexWhere((element) => element == message);
+                          CustomImageWidgetProvider customImageProvider =
+                              CustomImageWidgetProvider(
+                                  imageUrls: reverseUrls,
+                                  initialIndex: curPicId);
+                          showImageViewerPager(context, customImageProvider,
+                              doubleTapZoomable: true, swipeDismissible: true);
                         },
                         child: Container(
                             decoration: const BoxDecoration(
@@ -355,8 +430,8 @@ class _ChatPageState extends State<ChatPage> {
                       )
                     : type == 'sticker'
                         ? SizedBox(
-                            width: MediaQuery.of(context).size.width * 0.25,
-                            height: MediaQuery.of(context).size.height * 0.25,
+                            width: MediaQuery.of(context).size.width * 0.26,
+                            height: MediaQuery.of(context).size.height * 0.1581,
                             child: CachedNetworkImage(
                               imageUrl: message,
                               errorWidget: (context, url, error) =>
@@ -407,10 +482,6 @@ class _ChatPageState extends State<ChatPage> {
                                         child: Container(
                                             margin: const EdgeInsets.symmetric(
                                                 vertical: 8, horizontal: 10),
-                                            // decoration: const BoxDecoration(
-                                            //     color: Color.fromARGB(255, 217, 201, 81),
-                                            //     borderRadius:
-                                            //         BorderRadius.all(Radius.circular(10))),
                                             child: Column(
                                               children: [
                                                 Image.asset(
@@ -452,11 +523,6 @@ class _ChatPageState extends State<ChatPage> {
                                         : Container(
                                             margin: const EdgeInsets.symmetric(
                                                 vertical: 8, horizontal: 10),
-                                            // decoration: const BoxDecoration(
-                                            //     color:
-                                            //         Color.fromARGB(255, 217, 201, 81),
-                                            //     borderRadius: BorderRadius.all(
-                                            //         Radius.circular(10))),
                                             child: Column(
                                               children: [
                                                 Image.asset(
@@ -519,6 +585,15 @@ class _ChatPageState extends State<ChatPage> {
               // return const CircularProgressIndicator(
               //     color: Color.fromARGB(255, 15, 119, 19));
               case ConnectionState.done:
+                imageUrls.clear();
+                imageSenders.clear();
+                for (int i = 0; i < snapshot.data.docs.length; i++) {
+                  if (snapshot.data.docs[i]['type'] == "image" &&
+                      snapshot.data.docs[i]['status'].toString().isEmpty) {
+                    imageUrls.add(snapshot.data.docs[i]['message']);
+                    imageSenders.add(snapshot.data.docs[i]['sendBy']);
+                  }
+                }
                 return snapshot.hasData
                     ? ListView.builder(
                         primary: true,
@@ -535,13 +610,13 @@ class _ChatPageState extends State<ChatPage> {
                                   snapshot.data.docs[index]['messageId']);
                             }
                           }
-                          _firestore.batch().commit();
+
                           return GestureDetector(
                             onLongPress: (() async {
+                              debugPrint('$imageSenders');
                               if (snapshot.data.docs[index]['sendBy']
                                       .toString() ==
                                   _auth.currentUser!.displayName.toString()) {
-                                // popUpMenu(snapshot.data.docs[index]['messageId']);
                                 int? value = await showMenu<int>(
                                     context: context,
                                     position: RelativeRect.fromLTRB(x, y, x, y),
@@ -569,6 +644,7 @@ class _ChatPageState extends State<ChatPage> {
                             }),
                             child: chatMessageTile(
                                 ds['message'],
+                                ds['sendBy'],
                                 myName == ds['sendBy'],
                                 ds['ts'],
                                 ds['cread'].toString(),
@@ -667,6 +743,8 @@ class _ChatPageState extends State<ChatPage> {
 
   getAndSetMessage() async {
     messageStream = await DatabaseMethods().getChatRoomMessages(chatRoomId);
+    // imageUrls.clear();
+    // imageSenders.clear();
     setState(() {});
   }
 
@@ -751,25 +829,27 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ],
       ),
-      body: ConstrainedBox(
-        constraints: BoxConstraints.tight(Size(
-            MediaQuery.of(context).size.width,
-            MediaQuery.of(context).size.height)),
-        child: MouseRegion(
-          onHover: _updateLocation,
-          child: Column(
-            children: [
-              Expanded(child: chatMessage()),
-              if (_isUploading)
-                const Padding(
-                  padding: EdgeInsets.only(right: 25, bottom: 15),
-                  child: Align(
-                    alignment: Alignment.bottomRight,
-                    child: CircularProgressIndicator(),
+      body: SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints.tight(Size(
+              MediaQuery.of(context).size.width,
+              MediaQuery.of(context).size.height)),
+          child: MouseRegion(
+            onHover: _updateLocation,
+            child: Column(
+              children: [
+                Expanded(child: chatMessage()),
+                if (_isUploading)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 25, bottom: 15),
+                    child: Align(
+                      alignment: Alignment.bottomRight,
+                      child: CircularProgressIndicator(),
+                    ),
                   ),
-                ),
-              _chatInput()
-            ],
+                _chatInput()
+              ],
+            ),
           ),
         ),
       ),
@@ -829,29 +909,20 @@ class _ChatPageState extends State<ChatPage> {
                             icon: const Icon(Icons.arrow_forward_ios,
                                 color: Colors.blueAccent)),
                     Expanded(
-                        child: TextField(
-                      controller: messagecontroller,
-                      // contentInsertionConfiguration:
-                      //     ContentInsertionConfiguration(
-                      //   allowedMimeTypes: [
-                      //     "image/png", /*...*/
-                      //   ],
-                      //   onContentInserted:
-                      //       (KeyboardInsertedContent data) async {
-                      //     if (data.data != null) {
-                      //       setState(() {
-                      //         bytes = data.data;
-                      //       });
-                      //     }
-                      //   },
-                      //   // onContentInserted: (_) {/*your cb here*/},
-                      // ),
-                      maxLines: null,
-                      keyboardType: TextInputType.multiline,
-                      decoration: const InputDecoration(
-                          hintText: 'Type a message...',
-                          hintStyle: TextStyle(color: Colors.blueAccent),
-                          border: InputBorder.none),
+                        child: Container(
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 2, horizontal: 2),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 2, horizontal: 2),
+                      child: TextField(
+                        controller: messagecontroller,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+                        decoration: const InputDecoration(
+                            hintText: 'Type a message...',
+                            hintStyle: TextStyle(color: Colors.blueAccent),
+                            border: InputBorder.none),
+                      ),
                     )),
                     _showMore
                         ? IconButton(

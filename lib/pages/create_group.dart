@@ -67,8 +67,7 @@ class _CreateGroupState extends State<CreateGroup> {
       'Name': _groupName.text,
       'Admin': widget.membersList[0]['Name'],
       'adminUID': _auth.currentUser!.uid,
-      'Photo':
-          'https://img.freepik.com/premium-vector/cute-little-student-girl-cartoon_96373-287.jpg',
+      'Photo': '',
       'groupId': groupId
     };
 
@@ -130,7 +129,7 @@ class _CreateGroupState extends State<CreateGroup> {
                       expands: true,
                       controller: _groupName,
                       decoration: InputDecoration(
-                        hintText: "Enter Group Name",
+                        hintText: 'Enter Group Name',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -141,19 +140,29 @@ class _CreateGroupState extends State<CreateGroup> {
                 SizedBox(
                   height: size.height / 50,
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      side: const BorderSide(
-                          width: 1, color: Color.fromARGB(255, 95, 57, 167)),
-                      backgroundColor: const Color.fromARGB(255, 220, 212, 245),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 25, vertical: 10),
-                      textStyle: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                      shadowColor: const Color.fromARGB(255, 71, 58, 96),
-                      elevation: 5),
-                  onPressed: createGroup,
-                  child: const Text("Create Group"),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.5,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18.0)),
+                        side: const BorderSide(
+                            width: 1, color: Color.fromARGB(255, 95, 57, 167)),
+                        backgroundColor:
+                            const Color.fromARGB(255, 220, 212, 245),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 25, vertical: 10),
+                        textStyle: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                        shadowColor: const Color.fromARGB(255, 71, 58, 96),
+                        elevation: 5),
+                    onPressed: createGroup,
+                    child: const Text('Create Group',
+                        style: TextStyle(
+                            color: Color.fromARGB(255, 36, 12, 79),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                  ),
                 ),
               ],
             ),
