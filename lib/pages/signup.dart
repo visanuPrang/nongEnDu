@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:messagingapp/pages/signin.dart';
+import 'package:messagingapp/screens/chat_home.dart';
 import 'package:messagingapp/service/database.dart';
 import 'package:messagingapp/service/shared_pref.dart';
 
@@ -21,74 +22,82 @@ class _SignUpState extends State<SignUp> {
   final _formkey = GlobalKey<FormState>();
 
   registration() async {
-    // ----------- comment out auto add new user
-    var xName = ['P', 'S', 'T'];
-    password = '111111';
-    confirmPassword = '111111';
-    debugPrint('${xName.length}');
-    for (int i = 0; i < xName.length; i++) {
-      for (int n = 1; n < 10; n++) {
-        var email = "${xName[i]}0$n@endu.com";
-        var cName = "${xName[i]}0$n EnDu School";
-        debugPrint('${xName[i]} $email $cName');
-        if (password.toString() == confirmPassword.toString()) {
-          try {
-            // ignore: unused_local_variable
-            UserCredential userCredential = await FirebaseAuth.instance
-                .createUserWithEmailAndPassword(
-                    email: email, password: password);
-            User? user = userCredential.user;
-            await user?.updateDisplayName(cName);
-            await user?.reload();
+    // // ----------- comment out auto add new user
+    // var xName = ['P', 'S', 'T'];
+    // password = '111111';
+    // confirmPassword = '111111';
+    // debugPrint('${xName.length}');
+    // for (int i = 0; i < xName.length; i++) {
+    //   for (int n = 1; n < 10; n++) {
+    // var email = "${xName[i]}0$n@endu.com";
+    // var cName = "${xName[i]}0$n EnDu School";
+    // debugPrint('${xName[i]} $email $cName');
+    // // -----------------------------------------
+    if (password.toString() == confirmPassword.toString()) {
+      try {
+        // ignore: unused_local_variable
+        UserCredential userCredential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: email, password: password);
 
-            // User? user = userCredential.user;
-            String uid = user!.uid;
-            String updateusername = email.substring(0, email.indexOf('@'));
-            Map<String, dynamic> userInfoMap = {
-              'recordType': 'Person',
-              // 'Name': namecontroller.text,
-              // 'E-mail': emailcontroller.text,
-              'Name': cName, //namecontroller.text,
-              'E-mail': email, //emailcontroller.text,
-              'username': updateusername,
-              'Photo':
-                  'https://img.freepik.com/premium-vector/cute-little-student-girl-cartoon_96373-287.jpg',
-              'Id': uid,
-              'status': ''
-            };
-            await DatabaseMethods().addUserDetails(userInfoMap, uid);
-            await SharedPreferenceHelper().saveUserId(uid);
-            await SharedPreferenceHelper()
-                .saveUserDisplayName(namecontroller.text);
-            await SharedPreferenceHelper().saveUserEmail(emailcontroller.text);
-            await SharedPreferenceHelper().saveUserPic(
-                'https://img.freepik.com/premium-vector/cute-little-student-girl-cartoon_96373-287.jpg');
-            await SharedPreferenceHelper()
-                .saveUserName(emailcontroller.text.replaceAll('@endu.com', ''));
+        // // ----------- comment out auto add new user
+        // User? user = userCredential.user;
+        // await user?.updateDisplayName(cName);
+        // await user?.reload();
+        // // -----------------------------------------
 
-            // ignore: use_build_context_synchronously
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        User? user = userCredential.user;
+        await user?.updateDisplayName(namecontroller.text);
+        await user?.reload();
+        String uid = user!.uid;
+        String updateusername = email.substring(0, email.indexOf('@'));
+        Map<String, dynamic> userInfoMap = {
+          'recordType': 'Person',
+          'Name': namecontroller.text,
+          'E-mail': emailcontroller.text,
+
+          // // ----------- comment out auto add new user
+          // 'Name': cName, //namecontroller.text,
+          // 'E-mail': email, //emailcontroller.text,
+          // // -----------------------------------------
+
+          'username': updateusername,
+          'Photo':
+              'https://img.freepik.com/premium-vector/cute-little-student-girl-cartoon_96373-287.jpg',
+          'Id': uid,
+          'status': ''
+        };
+        await DatabaseMethods().addUserDetails(userInfoMap, uid);
+        await SharedPreferenceHelper().saveUserId(uid);
+        await SharedPreferenceHelper().saveUserDisplayName(namecontroller.text);
+        await SharedPreferenceHelper().saveUserEmail(emailcontroller.text);
+        await SharedPreferenceHelper().saveUserPic(
+            'https://img.freepik.com/premium-vector/cute-little-student-girl-cartoon_96373-287.jpg');
+        await SharedPreferenceHelper()
+            .saveUserName(emailcontroller.text.replaceAll('@endu.com', ''));
+
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            'register $email\nRegistered Successfully',
+            style: const TextStyle(fontSize: 20),
+          ),
+        ));
+        // ignore: use_build_context_synchronously
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (builder) => const ChatHomePage()));
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'weak-password') {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(
-                'register $email\nRegistered Successfully',
-                style: const TextStyle(fontSize: 20),
-              ),
-            ));
-            // ignore: use_build_context_synchronously
-            // Navigator.pushReplacement(context,
-            //     MaterialPageRoute(builder: (builder) => const ChatHomePage()));
-          } on FirebaseAuthException catch (e) {
-            // if (e.code == 'weak-password') {
-            // ignore: use_build_context_synchronously
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(
-              'register $email\n${e.message}',
-              style: const TextStyle(fontSize: 20),
-            )));
-            // }
-          }
+            'register $email\n${e.message}',
+            style: const TextStyle(fontSize: 20),
+          )));
         }
-      } //loop int n for automatic create user
-    } //loop int i for automatic create user
+      }
+    }
+    //   } //loop int n for automatic create user
+    // } //loop int i for automatic create user
   }
 
   @override

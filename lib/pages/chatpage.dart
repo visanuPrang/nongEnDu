@@ -120,6 +120,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   popUpMenu(messageId) {}
+
   noPhoto(xName) {
     String initial = '';
     var splitName = xName.split(' ');
@@ -438,23 +439,28 @@ class _ChatPageState extends State<ChatPage> {
                                   const Icon(Icons.error),
                             ))
                         : type.startsWith('.xls') || type.startsWith('.csv')
-                            ? Container(
-                                margin: const EdgeInsets.symmetric(
-                                    vertical: 8, horizontal: 10),
-                                decoration: const BoxDecoration(
-                                    color: Colors.transparent,
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(10))),
-                                child: Column(
-                                  children: [
-                                    Image.asset(
-                                      'images/Excel.png',
-                                      width: 100,
-                                      fit: BoxFit.cover,
-                                    ),
-                                    Text(tfName)
-                                  ],
-                                ))
+                            ? GestureDetector(
+                                onTap: (() {
+                                  _launchUrl(message);
+                                }),
+                                child: Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 8, horizontal: 10),
+                                    decoration: const BoxDecoration(
+                                        color: Colors.transparent,
+                                        borderRadius: BorderRadius.all(
+                                            Radius.circular(10))),
+                                    child: Column(
+                                      children: [
+                                        Image.asset(
+                                          'images/Excel.png',
+                                          width: 100,
+                                          fit: BoxFit.cover,
+                                        ),
+                                        Text(tfName)
+                                      ],
+                                    )),
+                              )
                             : type.startsWith('.pdf')
                                 ? GestureDetector(
                                     onTap: (() {
@@ -613,7 +619,6 @@ class _ChatPageState extends State<ChatPage> {
 
                           return GestureDetector(
                             onLongPress: (() async {
-                              debugPrint('$imageSenders');
                               if (snapshot.data.docs[index]['sendBy']
                                       .toString() ==
                                   _auth.currentUser!.displayName.toString()) {
@@ -629,12 +634,14 @@ class _ChatPageState extends State<ChatPage> {
                                 switch (value) {
                                   case 1:
                                     DatabaseMethods().updateMessageUD(
+                                        'chatrooms',
                                         chatRoomId!,
                                         snapshot.data.docs[index]['messageId'],
                                         'Unsend');
                                     break;
                                   case 2:
                                     DatabaseMethods().updateMessageUD(
+                                        'chatrooms',
                                         chatRoomId!,
                                         snapshot.data.docs[index]['messageId'],
                                         'Delete');
@@ -718,14 +725,15 @@ class _ChatPageState extends State<ChatPage> {
         'statusTime': ''
       };
       DatabaseMethods()
-          .addMessage(chatRoomId!, newMessageId!, messageInfoMap)
+          .addMessage('chatrooms', chatRoomId!, newMessageId!, messageInfoMap)
           .then((value) {
         Map<String, dynamic> lastMessageInfoMap = {
-          'lastMessage': message,
+          'lastMessage': type == 'text' ? message : alias,
           'lastMessageSentTs': formatedDate,
           'time': FieldValue.serverTimestamp(),
           'lastMessageSendBy': myUsername,
-          'messageId': newMessageId
+          'messageId': newMessageId,
+          'type': type
         };
         DatabaseMethods()
             .updateLastMessageSend(chatRoomId!, lastMessageInfoMap);

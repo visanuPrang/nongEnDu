@@ -21,10 +21,13 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   List<Map<String, dynamic>> currUser = [];
+  String lastMessageX = '';
+  String showLastMessage = '';
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   var allUserResultSet = [];
+  var lastMessageMap = [];
   bool isLoading = true;
 
   noPhoto(xName) {
@@ -37,6 +40,12 @@ class _HomeState extends State<Home> {
     return initial;
   }
 
+  getChatRoomIdbyUsername(String a, String b) {
+    var nameArray = [a, b];
+    nameArray.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return '${nameArray[0]}_${nameArray[1]}';
+  }
+
   getCurrentUserDetails() async {
     currUser.clear();
     await _firestore
@@ -45,14 +54,13 @@ class _HomeState extends State<Home> {
         .get()
         .then((map) {
       currUser.add({
-        "Name": map['Name'],
-        "E-mail": map['E-mail'],
-        "uid": map['Id'],
-        "Photo": map['Photo'],
-        "isAdmin": true,
+        'Name': map['Name'],
+        'E-mail': map['E-mail'],
+        'uid': map['Id'],
+        'Photo': map['Photo'],
+        'isAdmin': true,
       });
     });
-    // debugPrint('function==>$currUser');
   }
 
   Future<QuerySnapshot> chkUserIsInGroup(String userId) async {
@@ -72,6 +80,17 @@ class _HomeState extends State<Home> {
         .collection('groups')
         .where('Id', isEqualTo: gId)
         .get();
+  }
+
+  listAllLastMessage() async {
+    // lastMessageMap.clear();
+    await DatabaseMethods()
+        .getAllLastMessage()
+        .then((QuerySnapshot docs) async {
+      for (int i = 0; i < docs.docs.length; ++i) {
+        lastMessageMap.add(docs.docs[i].data());
+      }
+    });
   }
 
   listAllUser() async {
@@ -133,12 +152,11 @@ class _HomeState extends State<Home> {
   void initState() {
     // super.activate();
     super.initState();
-    // Firebase.initializeApp();
-    // FirebaseFirestore.setLoggingEnabled(true);
-    // _firestore; //.settings.sslEnabled;
     ontheload();
     getCurrentUserDetails();
     listAllUser();
+    listAllLastMessage();
+    debugPrint('initState');
   }
 
   @override
@@ -258,6 +276,46 @@ class _HomeState extends State<Home> {
   }
 
   Widget buildUserList(data) {
+    debugPrint('$data');
+    var inArray = lastMessageMap.length + 1;
+    var chatRoomId = '';
+    data['recordType'] == 'Group'
+        ? chatRoomId = data['groupId']
+        : chatRoomId = getChatRoomIdbyUsername(data['Name'], myName!);
+    for (int i = 0; i < lastMessageMap.length; i++) {
+      if (lastMessageMap[i]['chatRoomId'] == chatRoomId) {
+        inArray = i;
+        break;
+      }
+    }
+    showLastMessage = '';
+    if (inArray < lastMessageMap.length) {
+      if (lastMessageMap[inArray]['type'] == 'text') {
+        showLastMessage = lastMessageMap[inArray]['lastMessage'];
+      } else if (data['type'] == 'image') {
+        if (lastMessageMap[inArray]['lastMessageSendBy'] == myName) {
+          showLastMessage = 'You send a photo.';
+        } else {
+          showLastMessage =
+              "${lastMessageMap[inArray]['lastMessageSendBy']} send a photo.";
+        }
+      } else if (data['type'] == 'sticker') {
+        if (lastMessageMap[inArray]['lastMessageSendBy'] == myName) {
+          showLastMessage = 'You send a sticker.';
+        } else {
+          showLastMessage =
+              "${lastMessageMap[inArray]['lastMessageSendBy']} send a sticker.";
+        }
+      } else {
+        if (lastMessageMap[inArray]['lastMessageSendBy'] == myName) {
+          showLastMessage = 'You send a file.';
+        } else {
+          showLastMessage =
+              "${lastMessageMap[inArray]['lastMessageSendBy']} send a file.";
+        }
+      }
+    }
+
     return Column(
       children: [
         GestureDetector(
@@ -329,7 +387,11 @@ class _HomeState extends State<Home> {
                                       fontWeight: FontWeight.bold),
                                 ),
                                 Text(
-                                  data['E-mail'],
+                                  inArray > lastMessageMap.length
+                                      ? ''
+                                      : showLastMessage,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
                                   style: const TextStyle(
                                       color: Colors.black45,
                                       fontSize: 14,
@@ -398,7 +460,9 @@ class _HomeState extends State<Home> {
                                       fontWeight: FontWeight.bold),
                                 ),
                                 Text(
-                                  data['Admin'],
+                                  inArray > lastMessageMap.length
+                                      ? ''
+                                      : showLastMessage,
                                   style: const TextStyle(
                                       color: Colors.black45,
                                       fontSize: 14,
@@ -461,6 +525,12 @@ class _ChatRoomListTileState extends State<ChatRoomListTile> {
     profilePicUrl = "${querySnapshot.docs[0]['Photo']}";
     id = "${querySnapshot.docs[0]['Id']}";
     setState(() {});
+  }
+
+  getChatRoomIdbyUsername(String a, String b) {
+    var nameArray = [a, b];
+    nameArray.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return '${nameArray[0]}_${nameArray[1]}';
   }
 
   @override

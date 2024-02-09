@@ -68,7 +68,7 @@ class _KeyboardInsertedContentAppState
               : const Text('Select a sticker...'),
           Row(
             children: [
-              Container(
+              SizedBox(
                 width: MediaQuery.of(context).size.width * 0.5,
                 child: TextField(
                   keyboardType: TextInputType.text,
@@ -99,9 +99,11 @@ class _KeyboardInsertedContentAppState
               MaterialButton(
                 onPressed: () {
                   setState(() async {
-                    await saveImageFile(
-                        bytes, widget.chatRoomId, widget.myProfilePic);
-                    super.dispose();
+                    var usersGroup =
+                        widget.type == 'Person' ? 'chatrooms' : 'groups';
+                    await saveImageFile(bytes, widget.chatRoomId,
+                        widget.myProfilePic, usersGroup);
+                    // super.dispose();
                     // ignore: use_build_context_synchronously
                     Navigator.pushReplacement(context,
                         MaterialPageRoute(builder: (context) {
@@ -143,16 +145,18 @@ class _KeyboardInsertedContentAppState
     );
   }
 
-  saveImageFile(capturedImage, chatRoomId, myProfilePic) async {
+  saveImageFile(capturedImage, chatRoomId, myProfilePic, usersGroup) async {
     final directory = (await getApplicationDocumentsDirectory()).path;
-    String fileName = 'sticker.png';
+    String fileName = 'sticker.gif';
     var path = directory;
     final imagePath = await File('$directory/$fileName').create();
     await imagePath.writeAsBytes(capturedImage);
-    await sendChatImage(imagePath, fileName, chatRoomId, myProfilePic);
+    await sendChatImage(
+        imagePath, fileName, chatRoomId, myProfilePic, usersGroup);
   }
 
-  sendChatImage(File file, fileName, chatRoomId, myProfilePic) async {
+  sendChatImage(
+      File file, fileName, chatRoomId, myProfilePic, usersGroups) async {
     final FirebaseStorage storage = FirebaseStorage.instance;
     final ext = file.path.split('.').last;
     newMessageId = genMsgID();
@@ -168,11 +172,11 @@ class _KeyboardInsertedContentAppState
     });
     final messageText = await ref.getDownloadURL();
     await sendMessage(true, messageText, 'sticker', newMessageId, fileName,
-        chatRoomId, myProfilePic);
+        chatRoomId, myProfilePic, usersGroups);
   }
 
   sendMessage(bool sendClicked, String message, String type, newMessageId,
-      alias, chatRoomId, myProfilePic) {
+      alias, chatRoomId, myProfilePic, usersGroups) {
     if (message.isNotEmpty) {
       DateTime now = DateTime.now();
       String formatedDate = DateFormat('dd-MM-yyyy HH:mm').format(now);
@@ -191,14 +195,15 @@ class _KeyboardInsertedContentAppState
         'statusTime': ''
       };
       DatabaseMethods()
-          .addMessage(chatRoomId!, newMessageId!, messageInfoMap)
+          .addMessage(usersGroups, chatRoomId!, newMessageId!, messageInfoMap)
           .then((value) {
         Map<String, dynamic> lastMessageInfoMap = {
           'lastMessage': message,
           'lastMessageSentTs': formatedDate,
           'time': FieldValue.serverTimestamp(),
           'lastMessageSendBy': _auth.currentUser!.displayName,
-          'messageId': newMessageId
+          'messageId': newMessageId,
+          'type': type
         };
         DatabaseMethods()
             .updateLastMessageSend(chatRoomId!, lastMessageInfoMap);

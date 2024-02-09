@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:messagingapp/group_chats/group_info.dart';
 import 'package:messagingapp/image_viewer/viewimage.dart';
 import 'package:messagingapp/pages/emoji.dart';
+import 'package:messagingapp/service/database.dart';
 import 'package:random_string/random_string.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -35,8 +36,19 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   List<Map<String, dynamic>> currUser = [];
+  List<String> imageUrls = [];
   bool _isUploading = false, _showMore = false;
   late String newMessageId;
+  double x = 0.0;
+  double y = 0.0;
+  void _updateLocation(PointerEvent details) {
+    setState(() {
+      x = details.position.dx;
+      y = details.position.dy;
+    });
+  }
+
+  popUpMenu(messageId) {}
 
   Map<String, dynamic>? userMap;
 
@@ -114,7 +126,7 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
       )));
     });
     final messageText = await ref.getDownloadURL();
-    await onSendMessage(messageText, 'image', newMessageId, fileName);
+    await onSendMessage(messageText, ext, newMessageId, fileName, 'image');
   }
 
   sendChatFile(file, fileName) async {
@@ -135,39 +147,50 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
       )));
     });
     final messageText = await ref.getDownloadURL();
-    await onSendMessage(messageText, ext, newMessageId, fileName);
+    await onSendMessage(messageText, ext, newMessageId, fileName, ext);
   }
 
-  onSendMessage(messageText, ext, newMessageId, alias) async {
+  onSendMessage(messageText, ext, newMessageId, alias, type) async {
     // ignore: unused_local_variable
     final User? user = _auth.currentUser;
-    var sendTime = DateFormat('kk:mm:ss').format(DateTime.now());
-    var sendDate = DateFormat('dd-MM-yyyy').format(DateTime.now());
     DateTime now = DateTime.now();
     String formatedDate = DateFormat('dd-MM-yyyy HH:mm').format(now);
-
     if (messageText.isNotEmpty) {
       Map<String, dynamic> chatData = {
-        'imgUrl': currUser[0]['Photo'],
         'sendBy': _auth.currentUser!.displayName,
         'message': messageText,
-        'ts': formatedDate,
-        'type': 'text',
-        'cread': '',
         'time': FieldValue.serverTimestamp(),
+        'imgUrl': currUser[0]['Photo'],
+        'cread': '',
+        'ts': formatedDate,
+        'type': type,
         'alias': alias,
         'messageId': newMessageId,
         'status': '',
         'statusTime': ''
       };
+      DatabaseMethods()
+          .addMessage('groups', widget.groupChatId, newMessageId!, chatData)
+          .then((value) {
+        Map<String, dynamic> lastMessageInfoMap = {
+          'lastMessage': type != 'text' ? alias : messageText,
+          'lastMessageSentTs': formatedDate,
+          'time': FieldValue.serverTimestamp(),
+          'lastMessageSendBy': user!.displayName,
+          'messageId': newMessageId,
+          'type': type
+        };
+        DatabaseMethods()
+            .updateLastMessageSend(widget.groupChatId, lastMessageInfoMap);
 
-      _message.clear();
+        _message.clear();
 
-      await _firestore
-          .collection('groups')
-          .doc(widget.groupChatId)
-          .collection('chats')
-          .add(chatData);
+        // await _firestore
+        //     .collection('groups')
+        //     .doc(widget.groupChatId)
+        //     .collection('chats')
+        //     .add(chatData);
+      });
     }
   }
 
@@ -175,70 +198,122 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
     return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Row(
-            children: [
-              Expanded(
-                  child: Text(
-                widget.groupName,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              )),
-            ],
-          ),
-          actions: [
-            IconButton(
-                onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => GroupMaintenance(
-                          groupName: widget.groupName,
-                          groupId: widget.groupChatId,
-                        ),
-                      ),
-                    ),
-                icon: const Icon(Icons.more_vert)),
+        child: Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Expanded(
+                child: Text(
+              widget.groupName,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            )),
           ],
         ),
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              SizedBox(
-                height: size.height / 1.27,
-                width: size.width,
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: _firestore
-                      .collection('groups')
-                      .doc(widget.groupChatId)
-                      .collection('chats')
-                      .orderBy('time', descending: true)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      return ListView.builder(
-                        reverse: true,
-                        itemCount: snapshot.data!.docs.length,
-                        itemBuilder: (context, index) {
-                          Map<String, dynamic> chatMap =
-                              snapshot.data!.docs[index].data()
-                                  as Map<String, dynamic>;
-                          return messageTile(chatMap, currUser);
-                        },
-                      );
-                    } else {
-                      return Center(
-                        child: Text('${snapshot.data!.docs}'),
-                      );
-                    }
-                  },
+        actions: [
+          IconButton(
+              onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => GroupMaintenance(
+                        groupName: widget.groupName,
+                        groupId: widget.groupChatId,
+                      ),
+                    ),
+                  ),
+              icon: const Icon(Icons.more_vert)),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints.tight(Size(
+              MediaQuery.of(context).size.width,
+              MediaQuery.of(context).size.height)),
+          child: MouseRegion(
+            onHover: _updateLocation,
+            child: Column(
+              children: [
+                SizedBox(
+                  height: size.height / 1.27,
+                  width: size.width,
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: _firestore
+                        .collection('groups')
+                        .doc(widget.groupChatId)
+                        .collection('chats')
+                        .orderBy('time', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        imageUrls.clear();
+                        for (int i = 0; i < snapshot.data!.docs.length; i++) {
+                          if (snapshot.data!.docs[i]['type'] == "image" &&
+                              snapshot.data!.docs[i]['status']
+                                  .toString()
+                                  .isEmpty) {
+                            imageUrls.add(snapshot.data!.docs[i]['message']);
+                          }
+                        }
+                        return ListView.builder(
+                          reverse: true,
+                          itemCount: snapshot.data!.docs.length,
+                          itemBuilder: (context, index) {
+                            DocumentSnapshot ds = snapshot.data!.docs[index];
+                            Map<String, dynamic> chatMap =
+                                snapshot.data!.docs[index].data()
+                                    as Map<String, dynamic>;
+                            return GestureDetector(
+                              onLongPress: (() async {
+                                if (snapshot.data!.docs[index]['sendBy']
+                                        .toString() ==
+                                    _auth.currentUser!.displayName.toString()) {
+                                  int? value = await showMenu<int>(
+                                      context: context,
+                                      position:
+                                          RelativeRect.fromLTRB(x, y, x, y),
+                                      items: [
+                                        const PopupMenuItem(
+                                            value: 1, child: Text('Unsend')),
+                                        const PopupMenuItem(
+                                            value: 2, child: Text('Delete')),
+                                      ]);
+                                  switch (value) {
+                                    case 1:
+                                      DatabaseMethods().updateMessageUD(
+                                          'groups',
+                                          widget.groupChatId,
+                                          snapshot.data!.docs[index]
+                                              ['messageId'],
+                                          'Unsend');
+                                      break;
+                                    case 2:
+                                      DatabaseMethods().updateMessageUD(
+                                          'groups',
+                                          widget.groupChatId,
+                                          snapshot.data!.docs[index]
+                                              ['messageId'],
+                                          'Delete');
+                                      break;
+                                  }
+                                }
+                              }),
+                              child: messageTile(chatMap, currUser),
+                            );
+                          },
+                        );
+                      } else {
+                        return Center(
+                          child: Text('${snapshot.data!.docs}'),
+                        );
+                      }
+                    },
+                  ),
                 ),
-              ),
-              _chatInput()
-            ],
+                _chatInput()
+              ],
+            ),
           ),
         ),
       ),
-    );
+    ));
   }
 
 //Map<String, dynamic> chatMap, List<Map<String, dynamic>> currUser
@@ -409,44 +484,69 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
               chatMap['status'] == 'Delete' || chatMap['status'] == 'Unsend'
                   ? const SizedBox()
                   : chatMap['type'] == 'text'
-                      ? Container(
-                          decoration: sendByMe
-                              ? const BoxDecoration(
-                                  color: Color.fromARGB(255, 209, 249, 234),
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(20)))
-                              : const BoxDecoration(
-                                  color: Color.fromARGB(201, 198, 242, 250),
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(20))),
-                          margin: const EdgeInsets.symmetric(
-                              vertical: 5, horizontal: 8),
-                          padding: const EdgeInsets.all(10),
-                          child: Container(
-                            constraints: const BoxConstraints(
-                              minWidth: 0.0,
-                              minHeight: 0.0,
-                              maxWidth: 250.0,
-                              // maxHeight: 100.0,
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            sendByMe
+                                ? const SizedBox()
+                                : Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 2, horizontal: 17),
+                                    alignment: Alignment.topLeft,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 0.0,
+                                      minHeight: 0.0,
+                                      maxWidth: 250.0,
+                                      // maxHeight: 100.0,
+                                    ),
+                                    child: Text(
+                                      chatMap['sendBy'],
+                                      textAlign: TextAlign.start,
+                                    ),
+                                  ),
+                            Container(
+                              decoration: sendByMe
+                                  ? const BoxDecoration(
+                                      color: Color.fromARGB(255, 209, 249, 234),
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(10)))
+                                  : const BoxDecoration(
+                                      color: Color.fromARGB(201, 198, 242, 250),
+                                      borderRadius: BorderRadius.all(
+                                          Radius.circular(10))),
+                              margin: const EdgeInsets.symmetric(
+                                  vertical: 5, horizontal: 8),
+                              padding: const EdgeInsets.all(8),
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minWidth: 0.0,
+                                  minHeight: 0.0,
+                                  maxWidth: 250.0,
+                                  // maxHeight: 100.0,
+                                ),
+                                child: Text(
+                                  chatMap['message'],
+                                  maxLines: null,
+                                  softWrap: true,
+                                  textAlign: sendByMe
+                                      ? TextAlign.end
+                                      : TextAlign.start,
+                                  style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                                //   ],
+                                // ),
+                              ),
                             ),
-                            child: Text(
-                              chatMap['message'],
-                              maxLines: null,
-                              softWrap: true,
-                              textAlign:
-                                  sendByMe ? TextAlign.end : TextAlign.start,
-                              style: const TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500),
-                            ),
-                          ),
+                          ],
                         )
                       : chatMap['type'] == 'image'
                           ? GestureDetector(
                               onTap: () {
-                                final reverseUrls =
-                                    chatMap['message'].reversed.toList();
+                                debugPrint('$imageUrls');
+                                final reverseUrls = imageUrls.reversed.toList();
                                 final curPicId = reverseUrls.indexWhere(
                                     (element) => element == chatMap['message']);
                                 CustomImageWidgetProvider customImageProvider =
@@ -932,7 +1032,7 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
             MaterialButton(
               onPressed: () {
                 newMessageId = genMsgID();
-                onSendMessage(_message.text, '', newMessageId, '');
+                onSendMessage(_message.text, '', newMessageId, '', 'text');
                 // sendMessage(true);
               },
               minWidth: 0,
@@ -944,70 +1044,6 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
               child: const Icon(
                 Icons.telegram,
                 color: Color.fromARGB(255, 20, 20, 156),
-                size: 40,
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _chatInput1() {
-    return Container(
-      color: const Color.fromARGB(255, 224, 218, 228),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-        child: Row(
-          children: [
-            Expanded(
-              child: Card(
-                // color: const Color.fromARGB(255, 214, 199, 227),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15)),
-                child: Row(
-                  children: [
-                    IconButton(
-                        onPressed: () {}, // => Navigator.pop(context),
-                        icon: const Icon(Icons.emoji_emotions,
-                            color: Colors.blueAccent)),
-                    Expanded(
-                        child: TextField(
-                      // autofocus: true,
-                      controller: _message,
-                      maxLines: null,
-                      keyboardType: TextInputType.multiline,
-                      decoration: const InputDecoration(
-                          hintText: 'Type a message...',
-                          hintStyle: TextStyle(color: Colors.blueAccent),
-                          border: InputBorder.none),
-                    )),
-                    IconButton(
-                        onPressed: () async {}, // => Navigator.pop(context),
-                        icon:
-                            const Icon(Icons.image, color: Colors.blueAccent)),
-                    IconButton(
-                        onPressed: () {}, // => Navigator.pop(context),
-                        icon: const Icon(Icons.camera_alt_rounded,
-                            color: Colors.blueAccent)),
-                  ],
-                ),
-              ),
-            ),
-            MaterialButton(
-              onPressed: () {
-                newMessageId = genMsgID();
-                onSendMessage(_message.text, '', newMessageId, '');
-                // sendMessage(true);
-              },
-              minWidth: 0,
-              padding:
-                  const EdgeInsets.only(top: 10, bottom: 10, right: 5, left: 5),
-              shape: const CircleBorder(
-                  side: BorderSide(color: Colors.green, width: 3)),
-              child: const Icon(
-                Icons.telegram,
-                color: Colors.green,
                 size: 40,
               ),
             )
