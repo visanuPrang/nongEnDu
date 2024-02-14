@@ -96,6 +96,10 @@ class APIs {
     return (await firestore.collection('users').doc(user.uid).get()).exists;
   }
 
+  getCurrStatus() async {
+    return await firestore.collection('users').doc(user.uid).get();
+  }
+
   // for adding an chat user for our conversation
   static Future<bool> addChatUser(String email) async {
     final data = await firestore
@@ -257,6 +261,8 @@ class APIs {
       : '${id}_${user.uid}';
 
   // for getting all messages of a specific conversation from firestore database
+  // static Stream<QuerySnapshot<Map<String, dynamic>>> getAllMessages(
+  //     ChatUser user) {
   static Stream<QuerySnapshot<Map<String, dynamic>>> getAllMessages(
       ChatUser user) {
     return firestore

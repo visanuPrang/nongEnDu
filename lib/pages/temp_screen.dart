@@ -18,10 +18,13 @@ class _TempScreenState extends State<TempScreen> {
         future: AuthMethods().getcurrentUser(),
         builder: (context, AsyncSnapshot<dynamic> snapshot) {
           if (snapshot.hasData) {
+            // Navigator.push(
+            //   context,
+            //   MaterialPageRoute(builder: (context) => const ChatHomePage()),
+            // ).then((value) => setState(() {}));
             return const ChatHomePage();
-          } else {
-            return const SignIn();
           }
+          return const SignIn();
         },
       ),
     );

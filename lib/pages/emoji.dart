@@ -33,7 +33,6 @@ class KeyboardInsertedContentApp extends StatefulWidget {
 class _KeyboardInsertedContentAppState
     extends State<KeyboardInsertedContentApp> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _controller = TextEditingController();
   ScreenshotController screenshotController = ScreenshotController();
   late String newMessageId;
@@ -54,88 +53,113 @@ class _KeyboardInsertedContentAppState
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           bytes != null
-              ? Screenshot(
-                  controller: screenshotController,
-                  child: Container(
-                    color: Colors.amber,
-                    alignment: Alignment.topCenter,
-                    width: 120, //MediaQuery.of(context).size.width * 0.4,
-                    height: 120, // MediaQuery.of(context).size.height * 0.4,
-                    child:
-                        Image.memory(bytes!, fit: BoxFit.contain, scale: 0.7),
+              ? Center(
+                  child: Screenshot(
+                    controller: screenshotController,
+                    child: Container(
+                      color: Colors.amber,
+                      alignment: Alignment.topCenter,
+                      width: 120, //MediaQuery.of(context).size.width * 0.4,
+                      height: 120, // MediaQuery.of(context).size.height * 0.4,
+                      child:
+                          Image.memory(bytes!, fit: BoxFit.contain, scale: 0.7),
+                    ),
                   ),
                 )
               : const Text('Select a sticker...'),
-          Row(
-            children: [
-              SizedBox(
-                width: MediaQuery.of(context).size.width * 0.5,
-                child: TextField(
-                  keyboardType: TextInputType.text,
-                  onEditingComplete: () {
-                    debugPrint('onTap:');
+          Center(
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.only(
+                      left: 50, bottom: 20, right: 10, top: 20),
+                  margin: const EdgeInsets.only(
+                      left: 50, bottom: 20, right: 10, top: 20),
+                  alignment: Alignment.bottomCenter,
+                  width: MediaQuery.of(context).size.width * 0.5,
+                  child: TextField(
+                    keyboardType: TextInputType.text,
+                    // onEditingComplete: () {
+                    //   debugPrint('onTap:');
                     // _focus = false;
                     // FocusManager.instance.primaryFocus?.unfocus();
-                  },
-                  controller: _controller,
-                  autofocus: _focus == true,
-                  // onChanged: (event) => setState(() {
-                  //   debugPrint('change');
-                  //   _focus = false;
-                  //   FocusManager.instance.primaryFocus?.unfocus();
-                  // }),
-                  contentInsertionConfiguration: ContentInsertionConfiguration(
-                    allowedMimeTypes: const <String>['image/png', 'image/gif'],
-                    onContentInserted: (KeyboardInsertedContent data) async {
-                      if (data.data != null) {
-                        setState(() {
-                          bytes = data.data;
-                        });
-                      }
+                    // },
+                    onTapOutside: (PointerDownEvent event) {
+                      FocusManager.instance.primaryFocus?.unfocus();
                     },
+                    scrollPadding: const EdgeInsets.all(0),
+                    showCursor: false,
+                    // obscuringCharacter: ' ',
+                    // obscureText: true,
+                    controller: _controller,
+                    autofocus: _focus == true,
+                    decoration: const InputDecoration(border: InputBorder.none),
+                    // onChanged: (event) => setState(() {
+                    //   debugPrint('change');
+                    //   _focus = false;
+                    //   FocusManager.instance.primaryFocus?.unfocus();
+                    // }),
+                    contentInsertionConfiguration:
+                        ContentInsertionConfiguration(
+                      allowedMimeTypes: const <String>[
+                        'image/png',
+                        'image/gif'
+                      ],
+                      onContentInserted: (KeyboardInsertedContent data) async {
+                        if (data.data != null) {
+                          setState(() {
+                            bytes = data.data;
+                          });
+                        }
+                      },
+                    ),
                   ),
                 ),
-              ),
-              MaterialButton(
-                onPressed: () {
-                  setState(() async {
-                    var usersGroup =
-                        widget.type == 'Person' ? 'chatrooms' : 'groups';
-                    await saveImageFile(bytes, widget.chatRoomId,
-                        widget.myProfilePic, usersGroup);
-                    // super.dispose();
-                    // ignore: use_build_context_synchronously
-                    Navigator.pushReplacement(context,
-                        MaterialPageRoute(builder: (context) {
-                      return widget.type == 'Person'
-                          ? ChatPage(
-                              name: widget.name,
-                              page: widget.page,
-                              profileurl: widget.profileurl,
-                              type: widget.type,
-                              username: widget.username)
-                          : GroupChatRoom(
-                              groupName: widget.name,
-                              groupChatId: widget.chatRoomId,
-                              currUser: widget.username,
-                            );
-                    }));
-                  });
-                },
-                autofocus: _focus == false,
-                minWidth: 0,
-                padding: const EdgeInsets.only(
-                    top: 10, bottom: 10, right: 5, left: 5),
-                shape: const CircleBorder(
-                    side: BorderSide(
-                        color: Color.fromARGB(255, 20, 20, 156), width: 3)),
-                child: const Icon(
-                  Icons.telegram,
-                  color: Color.fromARGB(255, 20, 20, 156),
-                  size: 40,
+                MaterialButton(
+                  onPressed: () {
+                    setState(() async {
+                      const CircularProgressIndicator(
+                        semanticsLabel: 'loading...',
+                        color: Color.fromARGB(255, 2, 7, 106),
+                      );
+                      var usersGroup =
+                          widget.type == 'Person' ? 'chatrooms' : 'groups';
+                      await saveImageFile(bytes, widget.chatRoomId,
+                          widget.myProfilePic, usersGroup);
+                      // super.dispose();
+                      // ignore: use_build_context_synchronously
+                      Navigator.pushReplacement(context,
+                          MaterialPageRoute(builder: (context) {
+                        return widget.type == 'Person'
+                            ? ChatPage(
+                                name: widget.name,
+                                page: widget.page,
+                                profileurl: widget.profileurl,
+                                type: widget.type,
+                                username: widget.username)
+                            : GroupChatRoom(
+                                groupName: widget.name,
+                                groupChatId: widget.chatRoomId,
+                                currUser: widget.username,
+                              );
+                      }));
+                    });
+                  },
+                  autofocus: _focus == false,
+                  minWidth: 0,
+                  padding: const EdgeInsets.only(
+                      top: 10, bottom: 10, right: 5, left: 5),
+                  shape: const CircleBorder(
+                      side: BorderSide(
+                          color: Color.fromARGB(255, 20, 20, 156), width: 3)),
+                  child: const Icon(
+                    Icons.telegram,
+                    color: Color.fromARGB(255, 20, 20, 156),
+                    size: 30,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           // if (bytes != null)
           //   const Text("Here's the most recently inserted content:"),

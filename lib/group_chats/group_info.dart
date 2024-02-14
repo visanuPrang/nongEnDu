@@ -1,8 +1,13 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:messagingapp/group_maint/add_member.dart';
 import 'package:messagingapp/screens/chat_home.dart';
+import 'package:messagingapp/service/database.dart';
+import 'package:random_string/random_string.dart';
 
 class GroupMaintenance extends StatefulWidget {
   final String groupName, groupId;
@@ -23,6 +28,7 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
   List membersList = [];
   bool isLoading = true;
   bool logAsAdmin = false;
+  String newMessageId = '';
 
   @override
   void initState() {
@@ -48,7 +54,7 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
       if (sortMember == 0) {
         return a['Name'].compareTo(b['Name']);
       }
-
+      log('$membersList');
       var searchAdmin =
           membersList.firstWhere((dropdown) => dropdown['isAdmin'] == 'Admin');
       logAsAdmin = searchAdmin['Name'] == _auth.currentUser!.displayName;
@@ -90,6 +96,7 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
       isLoading = true;
     });
     String uid = membersList[index]['uid'];
+    String removeUserName = membersList[index]['Name'];
 
     membersList.removeAt(index);
     await _firestore
@@ -104,6 +111,25 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
         .doc(widget.groupId)
         .delete();
 
+    newMessageId = genMsgID();
+    DateTime now = DateTime.now();
+    String formatedDate = DateFormat('dd-MM-yyyy HH:mm').format(now);
+    Map<String, dynamic> chatData = {
+      'sendBy': 'Administrator',
+      'message':
+          '${_auth.currentUser!.displayName} Remove $removeUserName from group.',
+      'time': FieldValue.serverTimestamp(),
+      'imgUrl': '',
+      'cread': '',
+      'ts': formatedDate,
+      'type': 'notify',
+      'alias': '',
+      'messageId': '',
+      'status': '',
+      'statusTime': ''
+    };
+    DatabaseMethods()
+        .addMessage('groups', widget.groupId, newMessageId, chatData);
     setState(() {
       isLoading = false;
     });
@@ -133,6 +159,10 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
     }
   }
 
+  genMsgID() {
+    return randomAlphaNumeric(10);
+  }
+
   void onLeaveGroup() async {
     setState(() {
       isLoading = true;
@@ -156,6 +186,24 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
         .doc(widget.groupId)
         .delete();
 
+    var newMessageId = genMsgID();
+    DateTime now = DateTime.now();
+    String formatedDate = DateFormat('dd-MM-yyyy HH:mm').format(now);
+    Map<String, dynamic> chatData = {
+      'sendBy': 'Administrator',
+      'message': '${_auth.currentUser!.displayName} Leave group.',
+      'time': FieldValue.serverTimestamp(),
+      'imgUrl': '',
+      'cread': '',
+      'ts': formatedDate,
+      'type': 'notify',
+      'alias': '',
+      'messageId': '',
+      'status': '',
+      'statusTime': ''
+    };
+    DatabaseMethods()
+        .addMessage('groups', widget.groupId, newMessageId!, chatData);
     Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const ChatHomePage()),
         (route) => false);
@@ -314,12 +362,15 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
                           onTap: () =>
                               Navigator.of(context).push(MaterialPageRoute(
                                   builder: (_) => AddMembersInGroup(
-                                        groupID: widget.groupId,
+                                        groupId: widget.groupId,
                                         groupName: _editGroupName
                                             .text, //widget.groupName,
                                         membersList: membersList,
                                       ))),
-                          leading: const Icon(Icons.add),
+                          leading: const Icon(
+                            Icons.add,
+                            color: Colors.black,
+                          ),
                           title: const Text('Add Members',
                               style: TextStyle(
                                   fontSize: 17, fontWeight: FontWeight.w500)),

@@ -57,9 +57,10 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^24.2.3
   open_filex: ^4.4.0
   url_launcher: ^6.2.4
-  keyboard_emoji_picker: ^1.0.3
   screenshot: ^2.1.0
   easy_image_viewer: ^1.4.0
+  emoji_picker_flutter: ^1.6.4
+  auto_size_text: ^3.0.0
 
 dev_dependencies:
   flutter_test:

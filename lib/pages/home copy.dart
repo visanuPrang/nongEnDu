@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:draggable_fab/draggable_fab.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,7 +6,6 @@ import 'package:messagingapp/group_chats/group_chat_room.dart';
 import 'package:messagingapp/helper/my_date_util.dart';
 import 'package:messagingapp/pages/chatpage.dart';
 import 'package:messagingapp/pages/searchpage.dart';
-import 'package:messagingapp/service/apis.dart';
 import 'package:messagingapp/service/database.dart';
 import 'package:messagingapp/service/shared_pref.dart';
 
@@ -23,17 +20,14 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> with WidgetsBindingObserver {
-  late Map<String, dynamic> userMap;
+class _HomeState extends State<Home> {
   List<Map<String, dynamic>> currUser = [];
   String lastMessageX = '';
   String showLastMessage = '';
   String showTimeLastMessage = '';
-  String roomId = '';
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  Stream? messageStream;
-  String uName = '', userId = '', uStatus = '';
+
   var allUserResultSet = [];
   var lastMessageMap = [];
   bool isLoading = true;
@@ -90,43 +84,22 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         .get();
   }
 
-  listAllLastMessage(roomId) async {
-    // log(roomId);
+  listAllLastMessage() async {
+    // lastMessageMap.clear();
     await DatabaseMethods()
-        .getAllLastMessage(roomId)
+        .getAllLastMessage()
         .then((QuerySnapshot docs) async {
       for (int i = 0; i < docs.docs.length; ++i) {
         lastMessageMap.add(docs.docs[i].data());
       }
-      lastMessageMap.sort(((a, b) {
-        int sortLastMessage =
-            a['lastMessageSendBy'].compareTo(b['lastMessageSendBy']);
-        if (sortLastMessage == 0) {
-          return a['time'].compareTo(b['time']);
-        }
-        return sortLastMessage;
-      }));
-      // log('$lastMessageMap');
     });
   }
 
-  Future<bool> checkUser(cGroup) async {
-    var getGroup = await chkUserIsInGroup(_auth.currentUser!.uid);
-    bool showThis = true;
-    if (getGroup.docs.isEmpty) {
-      showThis = false;
-    } else {
-      for (int n = 0; n < getGroup.docs.length; n++) {
-        if (cGroup == getGroup.docs[n]['Id']) {
-          showThis = false;
-          break;
-        }
-      }
-    }
-    return true;
-  }
-
   listAllUser() async {
+    debugPrint(
+        'myName=>$myName / displayName=>${_auth.currentUser!.displayName}');
+    debugPrint('myUsername=>$myUsername =>${_auth.currentUser!.displayName}');
+    debugPrint('myEmail=>$myEmail / email=>${_auth.currentUser!.email}');
     // isLoading = true;
     allUserResultSet.clear();
     await DatabaseMethods().getAllUser().then((QuerySnapshot docs) async {
@@ -136,12 +109,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         }
       }
     });
-    for (int i = 0; i < allUserResultSet.length; ++i) {
-      allUserResultSet[i]['recordType'] == 'Group'
-          ? roomId = allUserResultSet[i]['Name']
-          : roomId =
-              getChatRoomIdbyUsername(allUserResultSet[i]['Name'], myName!);
-    }
     //remove duplicate
     var seen = <String>{};
     List unique = allUserResultSet
@@ -153,36 +120,28 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     // // sort descending
     // allUserResultSet.sort((a, b) => b["Name"].compareTo(a["Name"]));
 
-    // debugPrint('allUserResultSet==>${allUserResultSet.length}');
-    // var getGroup = await chkUserIsInGroup(_auth.currentUser!.uid);
-    // if (getGroup.docs.isEmpty) {
-    //   allUserResultSet
-    //       .removeWhere((element) => element['recordType'] == 'Group');
-    // } else {
-    //   for (int i = 0; i < allUserResultSet.length; i++) {
-    //     if (allUserResultSet[i]['recordType'] == 'Group') {
-    //       var isInGroup = false;
-    //       for (int n = 0; n < getGroup.docs.length; n++) {
-    //         if (allUserResultSet[i]['groupId'] == getGroup.docs[n]['Id']) {
-    //           isInGroup = true;
-    //           break;
-    //         }
-    //       }
-    //       if (!isInGroup) {
-    //         allUserResultSet.removeAt(i);
-    //       }
-    //     }
-    //   }
-    //   return allUserResultSet;
-    // }
-    // debugPrint('allUserResultSet==>${allUserResultSet.length}');
-    // for (int i = 0; i < allUserResultSet.length; i++) {
-    //   log("${allUserResultSet[i]['Name']} / ${allUserResultSet[i]['recordType']}");
-    // }
+    var getGroup = await chkUserIsInGroup(_auth.currentUser!.uid);
+    var isInGroup = false;
+    for (int i = 0; i < allUserResultSet.length; i++) {
+      if (allUserResultSet[i]['recordType'] == 'Group') {
+        for (int n = 0; n < getGroup.docs.length; n++) {
+          if (allUserResultSet[i]['groupId'] == getGroup.docs[n]['Id']) {
+            isInGroup = true;
+            break;
+          }
+        }
+        if (!isInGroup) {
+          allUserResultSet.removeAt(i);
+        }
+        isInGroup = false;
+      }
+    }
+    return allUserResultSet;
   }
 
   String? myName, myProfilePic, myUsername, myEmail;
   Stream? chatRoomsStream;
+
   getthesharedpref() async {
     myName = await SharedPreferenceHelper().getDisplayName();
     myProfilePic = await SharedPreferenceHelper().getUserPic();
@@ -196,41 +155,24 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     chatRoomsStream = await DatabaseMethods().getChatRooms();
   }
 
-  getUserList() async {
-    messageStream = await DatabaseMethods().getAllUserList();
-
-    // imageUrls.clear();
-    // imageSenders.clear();
-    setState(() {});
-  }
-
   @override
   void initState() {
     // super.activate();
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    setStatus('Offline');
     ontheload();
     getCurrentUserDetails();
-    // listAllUser();
-    getUserList();
-  }
-
-  void setStatus(String status) async {
-    await _firestore.collection('users').doc(_auth.currentUser!.uid).update({
-      'status': status,
-    });
+    listAllUser();
+    listAllLastMessage();
   }
 
   @override
   Widget build(BuildContext context) {
     Future refresh() async {
       setState(() {
-        Future.delayed(const Duration(seconds: 10));
-        ontheload();
+        // initState();
         getCurrentUserDetails();
-        // listAllUser();
-        getUserList();
+        listAllUser();
+        listAllLastMessage();
       });
     }
 
@@ -272,7 +214,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               )),
         ),
         backgroundColor: const Color.fromARGB(255, 231, 225, 236),
-
         body:
             // isLoading
             //     ? Container(
@@ -296,95 +237,59 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                       //     'https://img.freepik.com/premium-vector/cute-little-student-girl-cartoon_96373-287.jpg'),
                       fit: BoxFit.cover),
                 ),
-                child: RefreshIndicator(
-                  onRefresh: refresh,
-                  child: StreamBuilder(
-                      stream: messageStream,
-                      builder: (BuildContext context, AsyncSnapshot snapshot) {
-                        // return snapshot.hasData
-                        //     ? const SizedBox(
-                        //         child: Text("${snapshot.data.docs[0]['type']}"),
-                        //       )
-                        //     : const SizedBox(child: Text('no data'));
-                        switch (snapshot.connectionState) {
-                          case ConnectionState.none:
-                            return const Center(
-                              child: SizedBox(
-                                width: 40,
-                                height: 40,
-                                child: CircularProgressIndicator(
-                                    color: Color.fromARGB(255, 177, 21, 10)),
-                              ),
-                            );
-                          case ConnectionState.waiting:
-                          case ConnectionState.active:
-                          // wait state data change
-                          case ConnectionState.done:
-                            return ListView.builder(
-                              itemCount: snapshot.data!.docs.length,
+                child: FutureBuilder(
+                    future: listAllUser(),
+                    builder: (BuildContext context, AsyncSnapshot snapshot) {
+                      switch (snapshot.connectionState) {
+                        case ConnectionState.none:
+                          return const Center(
+                            child: SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: CircularProgressIndicator(
+                                  color: Color.fromARGB(255, 177, 21, 10)),
+                            ),
+                          );
+                        case ConnectionState.waiting:
+                          return const Center(
+                            child: SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: CircularProgressIndicator(
+                                  color: Color.fromARGB(255, 73, 44, 2)),
+                            ),
+                          );
+                        case ConnectionState.active:
+                          return const Center(
+                            child: SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: CircularProgressIndicator(
+                                  color: Color.fromARGB(255, 6, 6, 164)),
+                            ),
+                          );
+                        case ConnectionState.done:
+                          return RefreshIndicator(
+                            onRefresh: refresh,
+                            child: ListView.builder(
+                              itemCount: allUserResultSet.length,
                               itemBuilder: (BuildContext context, int index) {
-                                snapshot.data!.docs[index]['recordType'] ==
-                                        'Group'
-                                    ? roomId =
-                                        snapshot.data!.docs[index]['Name']
-                                    : roomId = getChatRoomIdbyUsername(
-                                        snapshot.data!.docs[index]['Name'],
-                                        myName!);
-                                // listAllLastMessage(roomId);
-                                // if (lastMessageMap.isNotEmpty) {
-                                //   debugPrint(
-                                //       "has data=>[$roomId] [${lastMessageMap[0]['lastMessage']}]");
-                                // } else {
-                                //   // listAllLastMessage(roomId);
-                                //   debugPrint(
-                                //       "no data=>$roomId [${lastMessageMap.length}]");
-                                // }
-                                if (snapshot.data!.docs[index]['Name'] ==
-                                        myName ||
-                                    snapshot.data!.docs[index]['recordType'] ==
-                                        'Group') {
-                                  return const SizedBox();
-                                } else {
-                                  return buildUserList(
-                                      snapshot.data!.docs[index]);
-                                }
+                                return buildUserList(allUserResultSet[index]);
                               },
-                            );
-                          // );
-                        }
-                      }),
-                )),
+                            ),
+                          );
+                      }
+                    })),
       ),
     );
   }
 
-  getLMG(chatRoomId) async {
-    // log(chatRoomId);
-    FutureBuilder(
-        future: await DatabaseMethods().getLastMessage(chatRoomId),
-        builder: (BuildContext context, AsyncSnapshot glmSnapshot) {
-          if (glmSnapshot.hasData) {
-            // log(glmSnapshot.data[0]['lastMessage']);
-            return glmSnapshot.data[0]['lastMessage'];
-          }
-          return glmSnapshot.data[0]['lastMessage'];
-        });
-  }
-
   Widget buildUserList(data) {
-    // log('$xi, $yi');
-    var chatRoomId = '';
-    data!['recordType'] == 'Group'
-        ? chatRoomId = data!['groupId']
-        : chatRoomId = getChatRoomIdbyUsername(data!['Name'], myName!);
-
-    listAllLastMessage(chatRoomId);
-    // log('$lastMessageMap');
-    // log('${lastMessageMap.length}');
     var inArray = lastMessageMap.length + 1;
-    // Future aGLMG;
-    // aGLMG = getLMG(chatRoomId);
-    // log('$aGLMG');
+    var chatRoomId = '';
+    data['recordType'] == 'Group'
+        ? chatRoomId = data['groupId']
+        : chatRoomId = getChatRoomIdbyUsername(data['Name'], myName!);
     for (int i = 0; i < lastMessageMap.length; i++) {
       if (lastMessageMap[i]['chatRoomId'] == chatRoomId) {
         inArray = i;
@@ -424,32 +329,32 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       children: [
         GestureDetector(
           onTap: () {
-            data!['recordType'] == 'Person'
+            data['recordType'] == 'Person'
                 ? Navigator.pushReplacement(context,
                     MaterialPageRoute(builder: (context) {
                     return ChatPage(
-                        type: data!['recordType'],
-                        name: data!['Name'],
-                        profileurl: data!['Photo'],
-                        username: data!['username'],
+                        type: data['recordType'],
+                        name: data['Name'],
+                        profileurl: data['Photo'],
+                        username: data['username'],
                         page: 'Home');
                   }))
                 : Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => GroupChatRoom(
-                        groupName: data!['Name'],
-                        groupChatId: data!['groupId'],
+                        groupName: data['Name'],
+                        groupChatId: data['groupId'],
                         currUser: '$currUser',
                       ),
                     ),
                   );
           },
-          child: data!['recordType'] == 'Person'
+          child: data['recordType'] == 'Person'
               ? Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    data!['Photo'].toString().isEmpty ||
-                            data!['Photo'].length == 0
+                    data['Photo'].toString().isEmpty ||
+                            data['Photo'].length == 0
                         ? Container(
                             alignment: Alignment.center,
                             height: 40,
@@ -459,7 +364,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                                 borderRadius:
                                     BorderRadius.all(Radius.circular(30))),
                             child: Text(
-                              noPhoto(data!['Name']),
+                              noPhoto(data['Name']),
                               style: const TextStyle(
                                   fontSize: 23,
                                   fontWeight: FontWeight.bold,
@@ -468,7 +373,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                         : ClipRRect(
                             borderRadius: BorderRadius.circular(30),
                             child: Image.network(
-                              data!['Photo'],
+                              data['Photo'],
                               height: 40,
                               width: 40,
                               fit: BoxFit.cover,
@@ -476,7 +381,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                           ),
                     const SizedBox(width: 5),
                     SizedBox(
-                      width: MediaQuery.of(context).size.width * .60,
+                      width: MediaQuery.of(context).size.width * .65,
                       child: Row(
                         children: [
                           Expanded(
@@ -484,7 +389,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  data!['Name'],
+                                  data['Name'],
                                   style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold),
@@ -529,7 +434,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                       children: [
                         Icon(
                           Icons.person,
-                          color: data!['status'] == 'Online'
+                          color: data['status'] == 'Online'
                               ? const Color.fromARGB(255, 83, 154, 2)
                               : const Color.fromARGB(255, 166, 3, 3),
                         ),
@@ -540,8 +445,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               : Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    data!['Photo'].toString().isEmpty ||
-                            data!['Photo'].length == 0
+                    data['Photo'].toString().isEmpty ||
+                            data['Photo'].length == 0
                         ? Container(
                             alignment: Alignment.center,
                             height: 40,
@@ -554,7 +459,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                         : ClipRRect(
                             borderRadius: BorderRadius.circular(30),
                             child: Image.network(
-                              data!['Photo'],
+                              data['Photo'],
                               height: 40,
                               width: 40,
                               fit: BoxFit.cover,
@@ -562,7 +467,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                           ),
                     const SizedBox(width: 5),
                     SizedBox(
-                      width: MediaQuery.of(context).size.width * .60,
+                      width: MediaQuery.of(context).size.width * .65,
                       child: Row(
                         children: [
                           Expanded(
@@ -571,7 +476,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  data!['Name'],
+                                  data['Name'],
                                   style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold),
@@ -653,6 +558,7 @@ class _ChatRoomListTileState extends State<ChatRoomListTile> {
   getthisUserInfo() async {
     username =
         widget.chatRoomId.replaceAll('_', '').replaceAll(widget.myUsername, '');
+    debugPrint('username=>$username');
     QuerySnapshot querySnapshot = await DatabaseMethods().getUserInfo(username);
     name = "${querySnapshot.docs[0]['Name']}";
     profilePicUrl = "${querySnapshot.docs[0]['Photo']}";
@@ -666,11 +572,11 @@ class _ChatRoomListTileState extends State<ChatRoomListTile> {
     return '${nameArray[0]}_${nameArray[1]}';
   }
 
-  // @override
-  // void initState() {
-  //   getthisUserInfo();
-  //   super.initState();
-  // }
+  @override
+  void initState() {
+    getthisUserInfo();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {

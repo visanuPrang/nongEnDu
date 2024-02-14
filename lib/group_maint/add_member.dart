@@ -1,15 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:messagingapp/group_chats/group_info.dart';
+import 'package:messagingapp/service/database.dart';
+import 'package:random_string/random_string.dart';
 
 class AddMembersInGroup extends StatefulWidget {
-  final String groupName, groupID;
+  final String groupName, groupId;
   final List membersList;
   const AddMembersInGroup(
       {required this.membersList,
       required this.groupName,
-      required this.groupID,
+      required this.groupId,
       Key? key})
       : super(key: key);
 
@@ -24,6 +27,7 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
   List membersList = [];
   Map<String, dynamic>? userMap;
   bool isLoading = false;
+  String newMessageId = '';
 
   @override
   void initState() {
@@ -76,17 +80,21 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
     if (!isAlreadyExist) {
       setState(() {
         membersList.add({
-          "Name": userMap!['Name'],
-          "E-mail": userMap!['E-mail'],
-          "uid": userMap!['Id'],
-          "Photo": userMap!['Photo'],
-          "isAdmin": 'New'
+          'Name': userMap!['Name'],
+          'E-mail': userMap!['E-mail'],
+          'uid': userMap!['Id'],
+          'Photo': userMap!['Photo'],
+          'isAdmin': 'New'
           // _auth.currentUser!.uid == userMap!['Id'] ? 'Admin' : 'Member',
         });
 
         userMap = null;
       });
     }
+  }
+
+  genMsgID() {
+    return randomAlphaNumeric(10);
   }
 
   void onAddMembers() async {
@@ -96,13 +104,33 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
             .collection('users')
             .doc(membersList[i]['uid'])
             .collection('groups')
-            .doc(widget.groupID)
+            .doc(widget.groupId)
             .set({
           'Admin': _auth.currentUser!.displayName,
-          'Id': widget.groupID,
+          'Id': widget.groupId,
           'Name': widget.groupName,
           'Photo': ''
         });
+
+        newMessageId = genMsgID();
+        DateTime now = DateTime.now();
+        String formatedDate = DateFormat('dd-MM-yyyy HH:mm').format(now);
+        Map<String, dynamic> chatData = {
+          'sendBy': 'Administrator',
+          'message':
+              '${_auth.currentUser!.displayName} Add ${membersList[i]['Name']} in group.',
+          'time': FieldValue.serverTimestamp(),
+          'imgUrl': '',
+          'cread': '',
+          'ts': formatedDate,
+          'type': 'notify',
+          'alias': '',
+          'messageId': '',
+          'status': '',
+          'statusTime': ''
+        };
+        DatabaseMethods()
+            .addMessage('groups', widget.groupId, newMessageId, chatData);
       }
     }
     for (int i = 0; i < membersList.length; i++) {
@@ -112,12 +140,13 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
     }
     await _firestore
         .collection('groups')
-        .doc(widget.groupID)
+        .doc(widget.groupId)
         .update({'members': membersList});
+
     Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
             builder: (_) => GroupMaintenance(
-                groupName: widget.groupName, groupId: widget.groupID)),
+                groupName: widget.groupName, groupId: widget.groupId)),
         (route) => false);
   }
 
@@ -134,7 +163,7 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
     Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
             builder: (_) => GroupMaintenance(
-                groupName: widget.groupName, groupId: widget.groupID)),
+                groupName: widget.groupName, groupId: widget.groupId)),
         (route) => false);
   }
 
@@ -152,6 +181,7 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
             children: [
               Center(
                 child: Container(
+                  margin: const EdgeInsets.only(top: 15),
                   height: size.height / 13,
                   width: size.width / 1.2,
                   alignment: Alignment.center,
@@ -170,7 +200,7 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
                         Icons.person,
                         color: Color.fromARGB(255, 95, 57, 167),
                       ),
-                      hintText: "Search",
+                      hintText: 'Search',
                       hintStyle: const TextStyle(
                           color: Color.fromARGB(255, 95, 57, 167)),
                       border: OutlineInputBorder(
@@ -244,7 +274,8 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
                     shadowColor: const Color.fromARGB(255, 71, 58, 96),
                     elevation: 5),
                 onPressed: onSearch,
-                child: const Text("Search"),
+                child: const Text('Search',
+                    style: TextStyle(color: Color.fromARGB(255, 29, 6, 67))),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

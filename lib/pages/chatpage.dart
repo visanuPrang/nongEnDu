@@ -1,6 +1,8 @@
+import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_image_viewer/easy_image_viewer.dart';
@@ -10,6 +12,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:messagingapp/helper/my_date_util.dart';
 import 'package:messagingapp/pages/emoji.dart';
 import 'package:messagingapp/pages/searchpage.dart';
 import 'package:messagingapp/pages/signin.dart';
@@ -96,7 +99,7 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   TextEditingController messagecontroller = TextEditingController();
@@ -162,6 +165,8 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    setStatus('Online');
     ontheload();
   }
 
@@ -170,53 +175,6 @@ class _ChatPageState extends State<ChatPage> {
     nameArray.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return '${nameArray[0]}_${nameArray[1]}';
   }
-
-  // viewImage(imageFile) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (ctx) {
-  //       return AlertDialog(
-  //         content: Stack(
-  //           children: [
-  //             GestureDetector(
-  //               onTap: () {
-  //                 Navigator.pop(context);
-  //               },
-  //               child: SizedBox(
-  //                   width: MediaQuery.of(context).size.width,
-  //                   height: MediaQuery.of(context).size.height,
-  //                   child: CachedNetworkImage(
-  //                     fit: BoxFit.contain,
-  //                     imageUrl: imageFile,
-  //                     imageBuilder: (context, imageProvider) => Container(
-  //                       decoration: BoxDecoration(
-  //                         borderRadius:
-  //                             const BorderRadius.all(Radius.circular(10)),
-  //                         image: DecorationImage(
-  //                           image: imageProvider,
-  //                         ),
-  //                       ),
-  //                     ),
-  //                     placeholder: (context, url) => Container(
-  //                         width: 35,
-  //                         height: 35,
-  //                         decoration:
-  //                             const BoxDecoration(shape: BoxShape.circle),
-  //                         child:
-  //                             const CircularProgressIndicator(strokeWidth: 3)),
-  //                     errorWidget: (context, url, error) =>
-  //                         const Icon(Icons.error),
-  //                   )),
-  //             ),
-  //           ],
-  //         ),
-  //         insetPadding: EdgeInsets.zero,
-  //         contentPadding: EdgeInsets.zero,
-  //         // clipBehavior: Clip.antiAliasWithSaveLayer,
-  //       );
-  //     },
-  //   );
-  // }
 
   Future<void> _launchUrl(pdfFile) async {
     final Uri url = Uri.parse(pdfFile);
@@ -230,6 +188,7 @@ class _ChatPageState extends State<ChatPage> {
       String sendBy,
       bool sendByMe,
       String ts,
+      Timestamp time,
       String read,
       String type,
       String alias,
@@ -250,6 +209,9 @@ class _ChatPageState extends State<ChatPage> {
     return Row(
       mainAxisAlignment:
           sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+      crossAxisAlignment:
+          sendByMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      verticalDirection: VerticalDirection.down,
       children: [
         status == 'Delete'
             ? const SizedBox()
@@ -291,24 +253,39 @@ class _ChatPageState extends State<ChatPage> {
                   )
                 : sendByMe
                     ? Container(
+                        margin: const EdgeInsets.symmetric(vertical: 10),
                         padding: const EdgeInsets.only(right: 5),
-                        child: Column(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          verticalDirection: VerticalDirection.down,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            read == ''
-                                ? const SizedBox()
-                                : const Text(
-                                    'Read',
-                                    style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 10,
-                                    ),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              verticalDirection: VerticalDirection.down,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                read == ''
+                                    ? const SizedBox()
+                                    : const Text(
+                                        'Read',
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                Text(
+                                  MyDateUtil.getLastMessageTime(
+                                      context: context,
+                                      time:
+                                          time.microsecondsSinceEpoch ~/ 1000),
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 10,
                                   ),
-                            Text(
-                              initSRDate(ts),
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontSize: 10,
-                              ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -319,31 +296,42 @@ class _ChatPageState extends State<ChatPage> {
             : sendByMe
                 ? const SizedBox()
                 : widget.profileurl.isEmpty
-                    ? Flexible(
-                        child: Container(
-                            alignment: Alignment.center,
-                            height: 45,
-                            width: 45,
-                            decoration: const BoxDecoration(
-                                color: Color.fromARGB(255, 217, 201, 81),
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(30))),
-                            child: Text(
-                              noPhoto(widget.name),
-                              style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color.fromARGB(255, 19, 47, 94)),
-                            )),
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        verticalDirection: VerticalDirection.up,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                              height: 45,
+                              width: 45,
+                              decoration: const BoxDecoration(
+                                  color: Color.fromARGB(255, 217, 201, 81),
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(30))),
+                              child: Text(
+                                noPhoto(widget.name),
+                                style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color.fromARGB(255, 19, 47, 94)),
+                              )),
+                        ],
                       )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(60),
-                        child: Image.network(
-                          widget.profileurl,
-                          height: 45,
-                          width: 45,
-                          fit: BoxFit.cover,
-                        ),
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        verticalDirection: VerticalDirection.up,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(60),
+                            child: Image.network(
+                              widget.profileurl,
+                              height: 45,
+                              width: 45,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ],
                       ),
         status == 'Delete' || status == 'Unsend'
             ? const SizedBox()
@@ -371,7 +359,6 @@ class _ChatPageState extends State<ChatPage> {
                         message,
                         maxLines: null,
                         softWrap: true,
-                        textAlign: sendByMe ? TextAlign.end : TextAlign.start,
                         style: const TextStyle(
                             color: Colors.black,
                             fontSize: 16,
@@ -444,20 +431,33 @@ class _ChatPageState extends State<ChatPage> {
                                   _launchUrl(message);
                                 }),
                                 child: Container(
+                                    padding: const EdgeInsets.only(bottom: 10),
                                     margin: const EdgeInsets.symmetric(
                                         vertical: 8, horizontal: 10),
                                     decoration: const BoxDecoration(
                                         color: Colors.transparent,
                                         borderRadius: BorderRadius.all(
                                             Radius.circular(10))),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 100.0,
+                                      minHeight: 50.0,
+                                      maxWidth: 250.0,
+                                      maxHeight: 100.0,
+                                    ),
                                     child: Column(
                                       children: [
                                         Image.asset(
                                           'images/Excel.png',
-                                          width: 100,
-                                          fit: BoxFit.cover,
+                                          width: 65,
+                                          fit: BoxFit.contain,
                                         ),
-                                        Text(tfName)
+                                        Flexible(
+                                          child: Text(
+                                            alias,
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        )
                                       ],
                                     )),
                               )
@@ -469,14 +469,31 @@ class _ChatPageState extends State<ChatPage> {
                                     child: Container(
                                         margin: const EdgeInsets.symmetric(
                                             vertical: 8, horizontal: 10),
+                                        decoration: const BoxDecoration(
+                                            color: Colors.transparent,
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(10))),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 100.0,
+                                          minHeight: 50.0,
+                                          maxWidth: 250.0,
+                                          maxHeight: 100.0,
+                                        ),
                                         child: Column(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Image.asset(
                                               'images/pdfLogo.png',
-                                              width: 100,
+                                              width: 65,
                                               fit: BoxFit.cover,
                                             ),
-                                            Text(tfName)
+                                            Flexible(
+                                              child: Text(
+                                                alias,
+                                                maxLines: 3,
+                                                overflow: TextOverflow.fade,
+                                              ),
+                                            )
                                           ],
                                         )),
                                   )
@@ -488,14 +505,28 @@ class _ChatPageState extends State<ChatPage> {
                                         child: Container(
                                             margin: const EdgeInsets.symmetric(
                                                 vertical: 8, horizontal: 10),
+                                            constraints: const BoxConstraints(
+                                              minWidth: 100.0,
+                                              minHeight: 50.0,
+                                              maxWidth: 250.0,
+                                              maxHeight: 100.0,
+                                            ),
                                             child: Column(
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Image.asset(
                                                   'images/powerpoint.png',
-                                                  width: 100,
+                                                  width: 65,
                                                   fit: BoxFit.cover,
                                                 ),
-                                                Text(tfName)
+                                                Flexible(
+                                                  child: Text(
+                                                    alias,
+                                                    maxLines: 3,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                )
                                               ],
                                             )),
                                       )
@@ -515,40 +546,88 @@ class _ChatPageState extends State<ChatPage> {
                                                         BorderRadius.all(
                                                             Radius.circular(
                                                                 10))),
+                                                constraints:
+                                                    const BoxConstraints(
+                                                  minWidth: 100.0,
+                                                  minHeight: 50.0,
+                                                  maxWidth: 250.0,
+                                                  maxHeight: 100.0,
+                                                ),
                                                 child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
                                                   children: [
                                                     Image.asset(
                                                       'images/MSWord.png',
-                                                      width: 100,
+                                                      width: 65,
                                                       fit: BoxFit.cover,
                                                     ),
-                                                    Text(tfName)
+                                                    Flexible(
+                                                      child: Text(
+                                                        alias,
+                                                        maxLines: 3,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    )
                                                   ],
                                                 )),
                                           )
                                         : Container(
                                             margin: const EdgeInsets.symmetric(
                                                 vertical: 8, horizontal: 10),
+                                            constraints: const BoxConstraints(
+                                              minWidth: 100.0,
+                                              minHeight: 50.0,
+                                              maxWidth: 250.0,
+                                              maxHeight: 100.0,
+                                            ),
                                             child: Column(
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Image.asset(
                                                   'images/unknown.png',
-                                                  width: 100,
+                                                  width: 65,
                                                   fit: BoxFit.cover,
                                                 ),
-                                                Text(tfName)
+                                                Flexible(
+                                                  child: Text(
+                                                    alias,
+                                                    maxLines: 3,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                )
                                               ],
                                             )),
         status == 'Delete' || status == 'Unsend'
             ? const SizedBox()
             : sendByMe
                 ? const SizedBox()
-                : Text(
-                    initSRDate(ts),
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 10,
-                    ),
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.max,
+                    verticalDirection: VerticalDirection.down,
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.max,
+                        verticalDirection: VerticalDirection.down,
+                        children: [
+                          Text(
+                            MyDateUtil.getLastMessageTime(
+                                context: context,
+                                time: time.microsecondsSinceEpoch ~/ 1000),
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   )
       ],
     );
@@ -566,7 +645,8 @@ class _ChatPageState extends State<ChatPage> {
             fit: BoxFit.cover),
       ),
       child: StreamBuilder(
-          stream: messageStream,
+          stream:
+              messageStream, //_firestore.collection(collectionPath).doc().snapshots()
           builder: (context, AsyncSnapshot snapshot) {
             switch (snapshot.connectionState) {
               case ConnectionState.none:
@@ -654,6 +734,7 @@ class _ChatPageState extends State<ChatPage> {
                                 ds['sendBy'],
                                 myName == ds['sendBy'],
                                 ds['ts'],
+                                ds['time'],
                                 ds['cread'].toString(),
                                 ds['type'],
                                 ds['alias'],
@@ -728,10 +809,11 @@ class _ChatPageState extends State<ChatPage> {
           .addMessage('chatrooms', chatRoomId!, newMessageId!, messageInfoMap)
           .then((value) {
         Map<String, dynamic> lastMessageInfoMap = {
+          'chatRoomId': chatRoomId,
           'lastMessage': type == 'text' ? message : alias,
           'lastMessageSentTs': formatedDate,
           'time': FieldValue.serverTimestamp(),
-          'lastMessageSendBy': myUsername,
+          'lastMessageSendBy': myName,
           'messageId': newMessageId,
           'type': type
         };
@@ -781,9 +863,16 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  void setStatus(String status) async {
+    await _firestore.collection('users').doc(_auth.currentUser!.uid).update({
+      'status': status,
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color.fromARGB(255, 224, 218, 228),
       appBar: AppBar(
         leading: IconButton(
@@ -792,14 +881,22 @@ class _ChatPageState extends State<ChatPage> {
             color: Colors.white70,
           ),
           onPressed: () {
-            _firestore.terminate();
+            _firestore.clearPersistence();
+            // _firestore.terminate();
+            // Navigator.push( context, MaterialPageRoute( builder: (context) => SecondPage()), ).then((value) => setState(() {}));
             widget.page == 'Home'
-                ? Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => const TempScreen()))
-                : Navigator.push(
+                ? Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => const SearchPage()));
+                    MaterialPageRoute(builder: (context) => const TempScreen()),
+                  ).then((value) => setState(() {
+                      WidgetsBinding.instance.addObserver(this);
+                      setStatus('Offline');
+                    }))
+                : Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const SearchPage()))
+                    .then((value) => setState(() {}));
           },
         ),
         backgroundColor: const Color.fromARGB(255, 57, 6, 119),
@@ -838,6 +935,7 @@ class _ChatPageState extends State<ChatPage> {
         ],
       ),
       body: SafeArea(
+        maintainBottomViewPadding: true,
         child: ConstrainedBox(
           constraints: BoxConstraints.tight(Size(
               MediaQuery.of(context).size.width,
@@ -924,7 +1022,8 @@ class _ChatPageState extends State<ChatPage> {
                           vertical: 2, horizontal: 2),
                       child: TextField(
                         controller: messagecontroller,
-                        maxLines: null,
+                        minLines: 1,
+                        maxLines: 3,
                         keyboardType: TextInputType.multiline,
                         decoration: const InputDecoration(
                             hintText: 'Type a message...',

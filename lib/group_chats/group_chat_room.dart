@@ -1,17 +1,21 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/src/rendering/object.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:messagingapp/group_chats/group_info.dart';
+import 'package:messagingapp/helper/my_date_util.dart';
 import 'package:messagingapp/image_viewer/viewimage.dart';
 import 'package:messagingapp/pages/emoji.dart';
+import 'package:messagingapp/screens/chat_home.dart';
 import 'package:messagingapp/service/database.dart';
 import 'package:random_string/random_string.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -30,7 +34,8 @@ class GroupChatRoom extends StatefulWidget {
   State<GroupChatRoom> createState() => _GroupChatRoomState();
 }
 
-class _GroupChatRoomState extends State<GroupChatRoom> {
+class _GroupChatRoomState extends State<GroupChatRoom>
+    with WidgetsBindingObserver {
   final TextEditingController _message = TextEditingController();
   final TextEditingController chatMessage = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -38,7 +43,7 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
   List<Map<String, dynamic>> currUser = [];
   List<String> imageUrls = [];
   bool _isUploading = false, _showMore = false;
-  late String newMessageId;
+  late String newMessageId, oldSender = '';
   double x = 0.0;
   double y = 0.0;
   void _updateLocation(PointerEvent details) {
@@ -55,6 +60,8 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    setStatus('Online');
     getCurrentUserDetails();
   }
 
@@ -173,6 +180,7 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
           .addMessage('groups', widget.groupChatId, newMessageId!, chatData)
           .then((value) {
         Map<String, dynamic> lastMessageInfoMap = {
+          'chatRoomId': widget.groupChatId,
           'lastMessage': type != 'text' ? alias : messageText,
           'lastMessageSentTs': formatedDate,
           'time': FieldValue.serverTimestamp(),
@@ -194,12 +202,35 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
     }
   }
 
+  void setStatus(String status) async {
+    await _firestore.collection('users').doc(_auth.currentUser!.uid).update({
+      'status': status,
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
     return SafeArea(
         child: Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+          ),
+          onPressed: () {
+            _firestore.clearPersistence();
+            // _firestore.terminate();
+            // Navigator.push( context, MaterialPageRoute( builder: (context) => SecondPage()), ).then((value) => setState(() {}));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ChatHomePage()),
+            ).then((value) => setState(() {
+                  WidgetsBinding.instance.addObserver(this);
+                  setStatus('Offline');
+                }));
+          },
+        ),
         title: Row(
           children: [
             Expanded(
@@ -320,7 +351,10 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
   Widget messageTile(
       Map<String, dynamic> chatMap, List<Map<String, dynamic>> currUser) {
     final sendByMe = chatMap['sendBy'] == _auth.currentUser!.displayName;
-
+    // log("$oldSender == ${chatMap['sendBy']}");
+    // bool sameSender = oldSender == chatMap['sendBy'];
+    // sameSender ? oldSender = 'oldSender' : oldSender = chatMap['sendBy'];
+    bool sameSender = false;
     // String message,
     // String sendBy,
     // bool sendByMe,
@@ -358,40 +392,19 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
         tfName = buffName;
       }
     }
-    return chatMap['type'] == 'notify'
-        ? Container(
-            width: MediaQuery.of(context).size.width * 0.6,
-            alignment: Alignment.center,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                color: Colors.black38,
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    chatMap['message'],
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        : Row(
-            mainAxisAlignment:
-                sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+    return chatMap['type'] == 'notify' ||
+            chatMap['status'] == 'Delete' ||
+            chatMap['status'] == 'Unsend'
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            verticalDirection: VerticalDirection.up,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              chatMap['status'] == 'Delete'
-                  ? const SizedBox()
-                  : chatMap['status'] == 'Unsend'
-                      ? Container(
-                          width: MediaQuery.of(context).size.width,
+              chatMap['status'] == 'Delete' || chatMap['status'] == 'Unsend'
+                  ? chatMap['status'] == 'Delete'
+                      ? const SizedBox()
+                      : Container(
+                          width: MediaQuery.of(context).size.width * 0.8,
                           alignment: Alignment.center,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -402,272 +415,234 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
                               borderRadius: BorderRadius.circular(10),
                               color: Colors.black38,
                             ),
-                            child: Column(
-                              children: [
-                                sendByMe
-                                    ? const Text(
-                                        'You unsend a message',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : Text(
-                                        '${chatMap['sendBy']} unsend a message',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                              ],
-                            ),
+                            child: sendByMe
+                                ? const Text(
+                                    'You unsend a message',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    '${chatMap['sendBy']} unsend a message',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         )
-                      : sendByMe
-                          ? Container(
-                              padding: const EdgeInsets.only(right: 5),
-                              child: Column(
-                                children: [
-                                  chatMap['cread'] == ''
-                                      ? const SizedBox()
-                                      : const Text(
-                                          'Read',
-                                          style: TextStyle(
-                                            color: Colors.black87,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                  Text(
-                                    initSRDate(chatMap['ts']),
-                                    style: const TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : const SizedBox(),
-              chatMap['status'] == 'Delete' || chatMap['status'] == 'Unsend'
-                  ? const SizedBox()
-                  : sendByMe
-                      ? const SizedBox()
-                      : chatMap['imgUrl'].isEmpty
-                          ? Flexible(
-                              child: Container(
-                                  alignment: Alignment.center,
-                                  height: 45,
-                                  width: 45,
-                                  decoration: const BoxDecoration(
-                                      color: Color.fromARGB(255, 217, 201, 81),
-                                      borderRadius: BorderRadius.all(
-                                          Radius.circular(30))),
-                                  child: Text(
-                                    noPhoto(chatMap['sendBy']),
-                                    style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color.fromARGB(255, 19, 47, 94)),
-                                  )),
-                            )
-                          : ClipRRect(
-                              borderRadius: BorderRadius.circular(60),
-                              child: Image.network(
-                                chatMap['imgUrl'],
-                                height: 45,
-                                width: 45,
-                                fit: BoxFit.cover,
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      verticalDirection: VerticalDirection.down,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 8),
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 5, horizontal: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color: Colors.black38,
+                          ),
+                          child: Text(
+                            chatMap['message'],
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+            ],
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            verticalDirection: VerticalDirection.down,
+            mainAxisAlignment:
+                sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            children: [
+              sendByMe
+                  ? Container(
+                      color: Colors.amber,
+                      padding: const EdgeInsets.only(right: 5),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            margin: const EdgeInsets.symmetric(vertical: 12),
+                            child: Text(
+                              MyDateUtil.getLastMessageTime(
+                                  context: context,
+                                  time:
+                                      chatMap['time'].microsecondsSinceEpoch ~/
+                                          1000),
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontSize: 10,
                               ),
                             ),
-              chatMap['status'] == 'Delete' || chatMap['status'] == 'Unsend'
-                  ? const SizedBox()
-                  : chatMap['type'] == 'text'
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            sendByMe
-                                ? const SizedBox()
-                                : Container(
-                                    margin: const EdgeInsets.symmetric(
-                                        vertical: 2, horizontal: 17),
-                                    alignment: Alignment.topLeft,
-                                    constraints: const BoxConstraints(
-                                      minWidth: 0.0,
-                                      minHeight: 0.0,
-                                      maxWidth: 250.0,
-                                      // maxHeight: 100.0,
-                                    ),
-                                    child: Text(
-                                      chatMap['sendBy'],
-                                      textAlign: TextAlign.start,
-                                    ),
-                                  ),
-                            Container(
-                              decoration: sendByMe
-                                  ? const BoxDecoration(
+                          ),
+                          // Column(
+                          //   children: [
+                          //     chatMap['cread'] == ''
+                          //         ? const SizedBox()
+                          //         : const Text(
+                          //             'Read',
+                          //             style: TextStyle(
+                          //               color: Colors.black87,
+                          //               fontSize: 10,
+                          //             ),
+                          //           ),
+                          //     Text(
+                          //       MyDateUtil.getLastMessageTime(
+                          //           context: context,
+                          //           time: chatMap['time']
+                          //                   .microsecondsSinceEpoch ~/
+                          //               1000),
+                          //       style: const TextStyle(
+                          //         color: Colors.black87,
+                          //         fontSize: 10,
+                          //       ),
+                          //     ),
+                          //   ],
+                          // ),
+                          chatMap['type'] == 'text'
+                              ? Container(
+                                  padding: const EdgeInsets.all(8),
+                                  margin: const EdgeInsets.only(
+                                      left: 5, right: 8, top: 5, bottom: 3),
+                                  decoration: const BoxDecoration(
                                       color: Color.fromARGB(255, 209, 249, 234),
-                                      borderRadius:
-                                          BorderRadius.all(Radius.circular(10)))
-                                  : const BoxDecoration(
-                                      color: Color.fromARGB(201, 198, 242, 250),
                                       borderRadius: BorderRadius.all(
                                           Radius.circular(10))),
-                              margin: const EdgeInsets.symmetric(
-                                  vertical: 5, horizontal: 8),
-                              padding: const EdgeInsets.all(8),
-                              child: Container(
-                                constraints: const BoxConstraints(
-                                  minWidth: 0.0,
-                                  minHeight: 0.0,
-                                  maxWidth: 250.0,
-                                  // maxHeight: 100.0,
-                                ),
-                                child: Text(
-                                  chatMap['message'],
-                                  maxLines: null,
-                                  softWrap: true,
-                                  textAlign: sendByMe
-                                      ? TextAlign.end
-                                      : TextAlign.start,
-                                  style: const TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500),
-                                ),
-                                //   ],
-                                // ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : chatMap['type'] == 'image'
-                          ? GestureDetector(
-                              onTap: () {
-                                debugPrint('$imageUrls');
-                                final reverseUrls = imageUrls.reversed.toList();
-                                final curPicId = reverseUrls.indexWhere(
-                                    (element) => element == chatMap['message']);
-                                CustomImageWidgetProvider customImageProvider =
-                                    CustomImageWidgetProvider(
-                                        imageUrls: reverseUrls,
-                                        initialIndex: curPicId);
-                                showImageViewerPager(
-                                    context, customImageProvider,
-                                    doubleTapZoomable: true,
-                                    swipeDismissible: true);
-                              },
-                              child: Container(
-                                  decoration: const BoxDecoration(
-                                      borderRadius: BorderRadius.all(
-                                          Radius.circular(20))),
-                                  margin: const EdgeInsets.symmetric(
-                                      vertical: 5, horizontal: 8),
-                                  padding: const EdgeInsets.all(10),
                                   constraints: const BoxConstraints(
-                                    minWidth: 80.0,
-                                    minHeight: 120.0,
-                                    maxWidth: 180.0,
-                                    maxHeight: 230.0,
+                                    minWidth: 0.0,
+                                    minHeight: 0.0,
+                                    maxWidth: 250.0,
+                                    // maxHeight: 100.0,
                                   ),
-                                  child: CachedNetworkImage(
-                                    imageUrl: chatMap['message'],
-                                    imageBuilder: (context, imageProvider) =>
-                                        Container(
-                                      decoration: BoxDecoration(
-                                        borderRadius: const BorderRadius.all(
-                                            Radius.circular(10)),
-                                        image: DecorationImage(
-                                          image: imageProvider,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
-                                    ),
-                                    placeholder: (context, url) => Container(
-                                        width: 35,
-                                        height: 35,
-                                        decoration: const BoxDecoration(
-                                            shape: BoxShape.circle),
-                                        child: const CircularProgressIndicator(
-                                            strokeWidth: 3)),
-                                    errorWidget: (context, url, error) =>
-                                        const Icon(Icons.error),
-                                  )),
-                            )
-                          : chatMap['type'] == 'sticker'
-                              ? SizedBox(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.26,
-                                  height: MediaQuery.of(context).size.height *
-                                      0.1581,
-                                  child: CachedNetworkImage(
-                                    imageUrl: chatMap['message'],
-                                    errorWidget: (context, url, error) =>
-                                        const Icon(Icons.error),
-                                  ))
-                              : chatMap['type'].startsWith('.xls') ||
-                                      chatMap['type'].startsWith('.csv')
-                                  ? Container(
-                                      margin: const EdgeInsets.symmetric(
-                                          vertical: 8, horizontal: 10),
-                                      decoration: const BoxDecoration(
-                                          color: Colors.transparent,
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(10))),
-                                      child: Column(
-                                        children: [
-                                          Image.asset(
-                                            'images/Excel.png',
-                                            width: 100,
-                                            fit: BoxFit.cover,
+                                  child: Text(chatMap['message']))
+                              : chatMap['type'] == 'image'
+                                  ? GestureDetector(
+                                      onTap: () {
+                                        debugPrint('$imageUrls');
+                                        final reverseUrls =
+                                            imageUrls.reversed.toList();
+                                        final curPicId = reverseUrls.indexWhere(
+                                            (element) =>
+                                                element == chatMap['message']);
+                                        CustomImageWidgetProvider
+                                            customImageProvider =
+                                            CustomImageWidgetProvider(
+                                                imageUrls: reverseUrls,
+                                                initialIndex: curPicId);
+                                        showImageViewerPager(
+                                            context, customImageProvider,
+                                            doubleTapZoomable: true,
+                                            swipeDismissible: true);
+                                      },
+                                      child: Container(
+                                          decoration: const BoxDecoration(
+                                              borderRadius: BorderRadius.all(
+                                                  Radius.circular(20))),
+                                          margin: const EdgeInsets.symmetric(
+                                              vertical: 5, horizontal: 8),
+                                          padding: const EdgeInsets.all(10),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 80.0,
+                                            minHeight: 120.0,
+                                            maxWidth: 180.0,
+                                            maxHeight: 230.0,
                                           ),
-                                          Text(tfName)
-                                        ],
-                                      ))
-                                  : chatMap['type'].startsWith('.pdf')
-                                      ? GestureDetector(
-                                          onTap: (() {
-                                            _launchUrl(chatMap['message']);
-                                          }),
-                                          child: Container(
+                                          child: CachedNetworkImage(
+                                            imageUrl: chatMap['message'],
+                                            imageBuilder:
+                                                (context, imageProvider) =>
+                                                    Container(
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    const BorderRadius.all(
+                                                        Radius.circular(10)),
+                                                image: DecorationImage(
+                                                  image: imageProvider,
+                                                  fit: BoxFit.contain,
+                                                ),
+                                              ),
+                                            ),
+                                            placeholder: (context, url) =>
+                                                Container(
+                                                    width: 35,
+                                                    height: 35,
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                            shape: BoxShape
+                                                                .circle),
+                                                    child:
+                                                        const CircularProgressIndicator(
+                                                            strokeWidth: 3)),
+                                            errorWidget:
+                                                (context, url, error) =>
+                                                    const Icon(Icons.error),
+                                          )),
+                                    )
+                                  : chatMap['type'] == 'sticker'
+                                      ? SizedBox(
+                                          width: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.26,
+                                          height: MediaQuery.of(context)
+                                                  .size
+                                                  .height *
+                                              0.1581,
+                                          child: CachedNetworkImage(
+                                            imageUrl: chatMap['message'],
+                                            errorWidget:
+                                                (context, url, error) =>
+                                                    const Icon(Icons.error),
+                                          ))
+                                      : chatMap['type'].startsWith('.xls') ||
+                                              chatMap['type'].startsWith('.csv')
+                                          ? Container(
                                               margin:
                                                   const EdgeInsets.symmetric(
                                                       vertical: 8,
                                                       horizontal: 10),
+                                              decoration: const BoxDecoration(
+                                                  color: Colors.transparent,
+                                                  borderRadius:
+                                                      BorderRadius.all(
+                                                          Radius.circular(10))),
+                                              constraints: const BoxConstraints(
+                                                minWidth: 80.0,
+                                                minHeight: 120.0,
+                                                maxWidth: 180.0,
+                                                maxHeight: 200.0,
+                                              ),
                                               child: Column(
                                                 children: [
                                                   Image.asset(
-                                                    'images/pdfLogo.png',
-                                                    width: 100,
+                                                    'images/Excel.png',
+                                                    width: 65,
                                                     fit: BoxFit.cover,
                                                   ),
-                                                  Text(tfName)
+                                                  Text(
+                                                    chatMap['alias'],
+                                                    maxLines: 3,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  )
                                                 ],
-                                              )),
-                                        )
-                                      : chatMap['type'].startsWith('.ppt')
-                                          ? GestureDetector(
-                                              onTap: (() {
-                                                _launchUrl(chatMap['message']);
-                                              }),
-                                              child: Container(
-                                                  margin: const EdgeInsets
-                                                      .symmetric(
-                                                      vertical: 8,
-                                                      horizontal: 10),
-                                                  child: Column(
-                                                    children: [
-                                                      Image.asset(
-                                                        'images/powerpoint.png',
-                                                        width: 100,
-                                                        fit: BoxFit.cover,
-                                                      ),
-                                                      Text(tfName)
-                                                    ],
-                                                  )),
-                                            )
-                                          : chatMap['type'].startsWith('.doc')
+                                              ))
+                                          : chatMap['type'].startsWith('.pdf')
                                               ? GestureDetector(
                                                   onTap: (() {
                                                     _launchUrl(
@@ -678,208 +653,606 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
                                                           .symmetric(
                                                           vertical: 8,
                                                           horizontal: 10),
-                                                      decoration: const BoxDecoration(
-                                                          color: Colors
-                                                              .transparent,
-                                                          borderRadius:
-                                                              BorderRadius.all(
-                                                                  Radius
-                                                                      .circular(
-                                                                          10))),
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                        minWidth: 80.0,
+                                                        minHeight: 120.0,
+                                                        maxWidth: 180.0,
+                                                        maxHeight: 200.0,
+                                                      ),
                                                       child: Column(
                                                         children: [
                                                           Image.asset(
-                                                            'images/MSWord.png',
-                                                            width: 100,
+                                                            'images/pdfLogo.png',
+                                                            width: 65,
                                                             fit: BoxFit.cover,
                                                           ),
-                                                          Text(tfName)
+                                                          Text(
+                                                            chatMap['alias'],
+                                                            maxLines: 3,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          )
                                                         ],
                                                       )),
                                                 )
-                                              : Container(
-                                                  margin: const EdgeInsets
-                                                      .symmetric(
-                                                      vertical: 8,
-                                                      horizontal: 10),
-                                                  child: Column(
-                                                    children: [
-                                                      Image.asset(
-                                                        'images/unknown.png',
-                                                        width: 100,
-                                                        fit: BoxFit.cover,
-                                                      ),
-                                                      Text(tfName)
-                                                    ],
-                                                  )),
-              chatMap['status'] == 'Delete' || chatMap['status'] == 'Unsend'
-                  ? const SizedBox()
-                  : sendByMe
-                      ? const SizedBox()
-                      : Text(
-                          initSRDate(chatMap['ts']),
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 10,
-                          ),
-                        )
-            ],
-          );
-  }
-
-  Widget messageTile1(Size size, Map<String, dynamic> chatMap,
-      List<Map<String, dynamic>> currUser) {
-    final sendByMe = chatMap['sendBy'] == _auth.currentUser!.displayName;
-    return Builder(builder: (_) {
-      if (chatMap['type'] == "text") {
-        chatMessage.text = chatMap['message'];
-        return Row(
-          mainAxisAlignment:
-              sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-          children: [
-            sendByMe
-                ? const SizedBox()
-                : chatMap['imgUrl'].isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(60),
-                        child: Image.network(
-                          chatMap['imgUrl'],
-                          height: 40,
-                          width: 40,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : Container(
-                        alignment: Alignment.center,
-                        height: 40,
-                        width: 40,
-                        decoration: const BoxDecoration(
-                            color: Color.fromARGB(255, 217, 201, 81),
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(30))),
-                        child: Text(
-                          noPhoto(chatMap['sendBy']),
-                          style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Color.fromARGB(255, 19, 47, 94)),
-                        )),
-            Container(
-              alignment:
-                  sendByMe ? Alignment.centerRight : Alignment.centerLeft,
-              margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-              child: Row(
-                mainAxisAlignment:
-                    sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                children: [
-                  sendByMe
-                      ? Text(
-                          initSRDate(chatMap['ts']),
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontSize: 10,
-                          ),
-                        )
-                      : const SizedBox(),
-                  Container(
-                    // width: size.width * 0.65,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 10),
-                    margin: sendByMe
-                        ? const EdgeInsets.only(left: 10)
-                        : const EdgeInsets.only(right: 10),
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.only(
-                            topLeft: const Radius.circular(15),
-                            bottomRight: sendByMe
-                                ? const Radius.circular(0)
-                                : const Radius.circular(15),
-                            topRight: const Radius.circular(15),
-                            bottomLeft: sendByMe
-                                ? const Radius.circular(15)
-                                : const Radius.circular(0)),
-                        color: sendByMe
-                            ? const Color.fromARGB(255, 230, 239, 255)
-                            : const Color.fromARGB(255, 229, 249, 230)),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 5, horizontal: 5),
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 5, horizontal: 8),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15)),
-                      child: Column(
+                                              : chatMap['type']
+                                                      .startsWith('.ppt')
+                                                  ? GestureDetector(
+                                                      onTap: (() {
+                                                        _launchUrl(
+                                                            chatMap['message']);
+                                                      }),
+                                                      child: Container(
+                                                          margin:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  vertical: 8,
+                                                                  horizontal:
+                                                                      10),
+                                                          constraints:
+                                                              const BoxConstraints(
+                                                            minWidth: 80.0,
+                                                            minHeight: 120.0,
+                                                            maxWidth: 180.0,
+                                                            maxHeight: 200.0,
+                                                          ),
+                                                          child: Column(
+                                                            children: [
+                                                              Image.asset(
+                                                                'images/powerpoint.png',
+                                                                width: 65,
+                                                                fit: BoxFit
+                                                                    .cover,
+                                                              ),
+                                                              Text(
+                                                                chatMap[
+                                                                    'alias'],
+                                                                maxLines: 3,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              )
+                                                            ],
+                                                          )),
+                                                    )
+                                                  : chatMap['type']
+                                                          .startsWith('.doc')
+                                                      ? GestureDetector(
+                                                          onTap: (() {
+                                                            _launchUrl(chatMap[
+                                                                'message']);
+                                                          }),
+                                                          child: Container(
+                                                              margin:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                      vertical:
+                                                                          8,
+                                                                      horizontal:
+                                                                          10),
+                                                              constraints:
+                                                                  const BoxConstraints(
+                                                                minWidth: 80.0,
+                                                                minHeight:
+                                                                    120.0,
+                                                                maxWidth: 180.0,
+                                                                maxHeight:
+                                                                    200.0,
+                                                              ),
+                                                              decoration: const BoxDecoration(
+                                                                  color: Colors
+                                                                      .transparent,
+                                                                  borderRadius:
+                                                                      BorderRadius.all(
+                                                                          Radius.circular(
+                                                                              10))),
+                                                              child: Column(
+                                                                children: [
+                                                                  Image.asset(
+                                                                    'images/MSWord.png',
+                                                                    width: 65,
+                                                                    fit: BoxFit
+                                                                        .cover,
+                                                                  ),
+                                                                  Text(
+                                                                    chatMap[
+                                                                        'alias'],
+                                                                    maxLines: 3,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  )
+                                                                ],
+                                                              )),
+                                                        )
+                                                      : Container(
+                                                          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                                          constraints: const BoxConstraints(
+                                                            minWidth: 80.0,
+                                                            minHeight: 120.0,
+                                                            maxWidth: 180.0,
+                                                            maxHeight: 200.0,
+                                                          ),
+                                                          child: Column(
+                                                            children: [
+                                                              Image.asset(
+                                                                'images/unknown.png',
+                                                                width: 65,
+                                                                fit: BoxFit
+                                                                    .cover,
+                                                              ),
+                                                              Text(
+                                                                chatMap[
+                                                                    'alias'],
+                                                                maxLines: 3,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              )
+                                                            ],
+                                                          )),
+                        ],
+                      ),
+                    )
+// =========================== send by other ===========================
+                  : Container(
+                      margin: const EdgeInsets.symmetric(vertical: 7),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        verticalDirection: VerticalDirection.down,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            chatMap['message'],
-                            textAlign:
-                                sendByMe ? TextAlign.end : TextAlign.start,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            verticalDirection: VerticalDirection.down,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              sameSender
+                                  ? Container(
+                                      alignment: Alignment.center,
+                                      height: 45,
+                                      width: 45,
+                                      margin: const EdgeInsets.only(
+                                          left: 10, right: 5),
+                                    )
+                                  : Container(
+                                      alignment: Alignment.center,
+                                      height: 45,
+                                      width: 45,
+                                      margin: const EdgeInsets.only(
+                                          left: 10, right: 5),
+                                      decoration: const BoxDecoration(
+                                          color:
+                                              Color.fromARGB(255, 217, 201, 81),
+                                          borderRadius: BorderRadius.all(
+                                              Radius.circular(30))),
+                                      child: chatMap['imgUrl'].isEmpty
+                                          ? Text(
+                                              noPhoto(chatMap['sendBy']),
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color.fromARGB(
+                                                      255, 19, 47, 94)),
+                                            )
+                                          : ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(60),
+                                              child: Image.network(
+                                                chatMap['imgUrl'],
+                                                height: 45,
+                                                width: 45,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                    ),
+                            ],
+                          ),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              sameSender
+                                  ? const SizedBox()
+                                  : Text(chatMap['sendBy']),
+                              Container(
+                                decoration: const BoxDecoration(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(10))),
+                                constraints: const BoxConstraints(
+                                  minWidth: 0.0,
+                                  minHeight: 0.0,
+                                  maxWidth: 250.0,
+                                  // maxHeight: 100.0,
+                                ),
+                                child: chatMap['type'] == 'text'
+                                    ? Container(
+                                        padding: const EdgeInsets.all(8),
+                                        margin: const EdgeInsets.only(
+                                            left: 5,
+                                            right: 8,
+                                            top: 5,
+                                            bottom: 3),
+                                        decoration: const BoxDecoration(
+                                            color: Color.fromARGB(
+                                                201, 198, 242, 250),
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(10))),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 0.0,
+                                          minHeight: 0.0,
+                                          maxWidth: 250.0,
+                                          // maxHeight: 100.0,
+                                        ),
+                                        child: Text(chatMap['message']))
+                                    : chatMap['type'] == 'image'
+                                        ? GestureDetector(
+                                            onTap: () {
+                                              debugPrint('$imageUrls');
+                                              final reverseUrls =
+                                                  imageUrls.reversed.toList();
+                                              final curPicId = reverseUrls
+                                                  .indexWhere((element) =>
+                                                      element ==
+                                                      chatMap['message']);
+                                              CustomImageWidgetProvider
+                                                  customImageProvider =
+                                                  CustomImageWidgetProvider(
+                                                      imageUrls: reverseUrls,
+                                                      initialIndex: curPicId);
+                                              showImageViewerPager(
+                                                  context, customImageProvider,
+                                                  doubleTapZoomable: true,
+                                                  swipeDismissible: true);
+                                            },
+                                            child: Container(
+                                                decoration: const BoxDecoration(
+                                                    // color: Colors.amber,
+                                                    borderRadius:
+                                                        BorderRadius.all(
+                                                            Radius.circular(
+                                                                20))),
+                                                constraints:
+                                                    const BoxConstraints(
+                                                  minWidth: 80.0,
+                                                  minHeight: 80.0,
+                                                  maxWidth: 180.0,
+                                                  // maxHeight: 180.0,
+                                                ),
+                                                child: CachedNetworkImage(
+                                                  imageUrl: chatMap['message'],
+                                                  imageBuilder: (context,
+                                                          imageProvider) =>
+                                                      Container(
+                                                    constraints:
+                                                        const BoxConstraints(
+                                                      minWidth: 80.0,
+                                                      minHeight: 80.0,
+                                                      maxWidth: 180.0,
+                                                      // maxHeight: 180.0,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      // color: Colors.amber,
+                                                      borderRadius:
+                                                          const BorderRadius
+                                                              .all(
+                                                              Radius.circular(
+                                                                  10)),
+                                                      image: DecorationImage(
+                                                        image: imageProvider,
+                                                        fit: BoxFit.contain,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  placeholder: (context, url) =>
+                                                      Container(
+                                                          constraints:
+                                                              const BoxConstraints(
+                                                            minWidth: 180.0,
+                                                            minHeight: 180.0,
+                                                            // maxWidth: 180.0,
+                                                            // maxHeight: 230.0,
+                                                          ),
+                                                          decoration:
+                                                              const BoxDecoration(
+                                                                  shape: BoxShape
+                                                                      .circle),
+                                                          child:
+                                                              const CircularProgressIndicator(
+                                                                  strokeWidth:
+                                                                      3)),
+                                                  errorWidget: (context, url,
+                                                          error) =>
+                                                      const Icon(Icons.error),
+                                                )),
+                                          )
+                                        : chatMap['type'] == 'sticker'
+                                            ? SizedBox(
+                                                width: MediaQuery.of(context)
+                                                        .size
+                                                        .width *
+                                                    0.26,
+                                                height: MediaQuery.of(context)
+                                                        .size
+                                                        .height *
+                                                    0.1581,
+                                                child: CachedNetworkImage(
+                                                  imageUrl: chatMap['message'],
+                                                  errorWidget: (context, url,
+                                                          error) =>
+                                                      const Icon(Icons.error),
+                                                ))
+                                            : chatMap['type']
+                                                        .startsWith('.xls') ||
+                                                    chatMap['type']
+                                                        .startsWith('.csv')
+                                                ? GestureDetector(
+                                                    onTap: (() {
+                                                      _launchUrl(
+                                                          chatMap['message']);
+                                                    }),
+                                                    child: Container(
+                                                        margin: const EdgeInsets
+                                                            .symmetric(
+                                                            vertical: 8,
+                                                            horizontal: 10),
+                                                        decoration: const BoxDecoration(
+                                                            color: Colors
+                                                                .transparent,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            10))),
+                                                        constraints:
+                                                            const BoxConstraints(
+                                                          minWidth: 0.0,
+                                                          minHeight: 0.0,
+                                                          maxWidth: 180.0,
+                                                          maxHeight: 100.0,
+                                                        ),
+                                                        child: Column(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            Image.asset(
+                                                              'images/Excel.png',
+                                                              width: 65,
+                                                              fit: BoxFit.cover,
+                                                            ),
+                                                            Text(
+                                                              chatMap['alias'],
+                                                              softWrap: true,
+                                                              maxLines: 3,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            )
+                                                          ],
+                                                        )),
+                                                  )
+                                                : chatMap['type']
+                                                        .startsWith('.pdf')
+                                                    ? GestureDetector(
+                                                        onTap: (() {
+                                                          _launchUrl(chatMap[
+                                                              'message']);
+                                                        }),
+                                                        child: Container(
+                                                            alignment: Alignment
+                                                                .topLeft,
+                                                            margin:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    vertical: 8,
+                                                                    horizontal:
+                                                                        10),
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                              minWidth: 0.0,
+                                                              minHeight: 0.0,
+                                                              maxWidth: 180.0,
+                                                              maxHeight: 120.0,
+                                                            ),
+                                                            child: Column(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .min,
+                                                              children: [
+                                                                Image.asset(
+                                                                  'images/pdfLogo.png',
+                                                                  width: 65,
+                                                                  fit: BoxFit
+                                                                      .cover,
+                                                                ),
+                                                                Text(
+                                                                  chatMap[
+                                                                      'alias'],
+                                                                  softWrap:
+                                                                      true,
+                                                                  maxLines: 3,
+                                                                  overflow:
+                                                                      TextOverflow
+                                                                          .ellipsis,
+                                                                )
+                                                              ],
+                                                            )),
+                                                      )
+                                                    : chatMap['type']
+                                                            .startsWith('.ppt')
+                                                        ? GestureDetector(
+                                                            onTap: (() {
+                                                              _launchUrl(chatMap[
+                                                                  'message']);
+                                                            }),
+                                                            child: Container(
+                                                                margin: const EdgeInsets
+                                                                    .symmetric(
+                                                                    vertical: 8,
+                                                                    horizontal:
+                                                                        10),
+                                                                constraints:
+                                                                    const BoxConstraints(
+                                                                  minWidth:
+                                                                      80.0,
+                                                                  minHeight:
+                                                                      120.0,
+                                                                  maxWidth:
+                                                                      180.0,
+                                                                  maxHeight:
+                                                                      200.0,
+                                                                ),
+                                                                child: Column(
+                                                                  children: [
+                                                                    Image.asset(
+                                                                      'images/powerpoint.png',
+                                                                      width: 65,
+                                                                      fit: BoxFit
+                                                                          .cover,
+                                                                    ),
+                                                                    Text(
+                                                                      chatMap[
+                                                                          'alias'],
+                                                                      maxLines:
+                                                                          3,
+                                                                      overflow:
+                                                                          TextOverflow
+                                                                              .ellipsis,
+                                                                    )
+                                                                  ],
+                                                                )),
+                                                          )
+                                                        : chatMap['type']
+                                                                .startsWith(
+                                                                    '.doc')
+                                                            ? GestureDetector(
+                                                                onTap: (() {
+                                                                  _launchUrl(
+                                                                      chatMap[
+                                                                          'message']);
+                                                                }),
+                                                                child:
+                                                                    Container(
+                                                                        margin: const EdgeInsets
+                                                                            .symmetric(
+                                                                            vertical:
+                                                                                8,
+                                                                            horizontal:
+                                                                                10),
+                                                                        decoration: const BoxDecoration(
+                                                                            color: Colors
+                                                                                .transparent,
+                                                                            borderRadius: BorderRadius.all(Radius.circular(
+                                                                                10))),
+                                                                        constraints:
+                                                                            const BoxConstraints(
+                                                                          minWidth:
+                                                                              80.0,
+                                                                          minHeight:
+                                                                              120.0,
+                                                                          maxWidth:
+                                                                              180.0,
+                                                                          maxHeight:
+                                                                              200.0,
+                                                                        ),
+                                                                        child:
+                                                                            Column(
+                                                                          children: [
+                                                                            Image.asset(
+                                                                              'images/MSWord.png',
+                                                                              width: 65,
+                                                                              fit: BoxFit.cover,
+                                                                            ),
+                                                                            Text(
+                                                                              chatMap['alias'],
+                                                                              maxLines: 3,
+                                                                              overflow: TextOverflow.ellipsis,
+                                                                            )
+                                                                          ],
+                                                                        )),
+                                                              )
+                                                            : Container(
+                                                                margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                                                constraints: const BoxConstraints(
+                                                                  minWidth:
+                                                                      80.0,
+                                                                  minHeight:
+                                                                      120.0,
+                                                                  maxWidth:
+                                                                      180.0,
+                                                                  maxHeight:
+                                                                      200.0,
+                                                                ),
+                                                                child: Column(
+                                                                  children: [
+                                                                    Image.asset(
+                                                                      'images/unknown.png',
+                                                                      width: 65,
+                                                                      fit: BoxFit
+                                                                          .cover,
+                                                                    ),
+                                                                    Text(
+                                                                      chatMap[
+                                                                          'alias'],
+                                                                      maxLines:
+                                                                          3,
+                                                                      overflow:
+                                                                          TextOverflow
+                                                                              .ellipsis,
+                                                                    ),
+                                                                  ],
+                                                                )),
+                              ),
+                              // Column(
+                              //   children: [
+                              //     Text(
+                              //       MyDateUtil.getLastMessageTime(
+                              //           context: context,
+                              //           time: chatMap['time']
+                              //                   .microsecondsSinceEpoch ~/
+                              //               1000),
+                              //       style: const TextStyle(
+                              //         color: Colors.black87,
+                              //         fontSize: 10,
+                              //       ),
+                              //     ),
+                              //   ],
+                              // )
+                            ],
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  sendByMe
-                      ? const SizedBox()
-                      : Text(
-                          initSRDate(chatMap['ts']),
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontSize: 10,
+              sendByMe ||
+                      chatMap['type'] == 'notify' ||
+                      chatMap['status'] == 'Delete' ||
+                      chatMap['status'] == 'Unsend'
+                  ? const SizedBox()
+                  : Column(
+                      // crossAxisAlignment: CrossAxisAlignment.start,
+                      // mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          margin: const EdgeInsets.symmetric(vertical: 12),
+                          child: Text(
+                            MyDateUtil.getLastMessageTime(
+                                context: context,
+                                time: chatMap['time'].microsecondsSinceEpoch ~/
+                                    1000),
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 10,
+                            ),
                           ),
-                        )
-                ],
-              ),
-            ),
-          ],
-        );
-      } else if (chatMap['type'] == "image") {
-        return Container(
-          width: size.width,
-          alignment: sendByMe ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-            margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-            height: size.height / 2,
-            child: Image.network(
-              chatMap['message'],
-            ),
-          ),
-        );
-      } else if (chatMap['type'] == 'notify') {
-        return Container(
-          width: size.width,
-          alignment: Alignment.center,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-            margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(5),
-              color: Colors.black38,
-            ),
-            child: Column(
-              children: [
-                Text(
-                  chatMap['message'],
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      } else {
-        return const SizedBox();
-      }
-    });
+                        ),
+                      ],
+                    )
+            ],
+          );
   }
 
   Widget _chatInput() {
@@ -943,7 +1316,8 @@ class _GroupChatRoomState extends State<GroupChatRoom> {
                           vertical: 2, horizontal: 2),
                       child: TextField(
                         controller: _message,
-                        maxLines: null,
+                        minLines: 1,
+                        maxLines: 3,
                         keyboardType: TextInputType.multiline,
                         decoration: const InputDecoration(
                             hintText: 'Type a message...',

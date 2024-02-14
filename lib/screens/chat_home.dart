@@ -47,7 +47,7 @@ class _ChatHomePageState extends State<ChatHomePage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    setStatus('Online');
+    setStatus('Offline');
   }
 
   void setStatus(String status) async {
