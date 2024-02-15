@@ -396,9 +396,9 @@ class _GroupChatRoomState extends State<GroupChatRoom>
             chatMap['status'] == 'Delete' ||
             chatMap['status'] == 'Unsend'
         ? Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
             verticalDirection: VerticalDirection.up,
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
               chatMap['status'] == 'Delete' || chatMap['status'] == 'Unsend'
                   ? chatMap['status'] == 'Delete'
@@ -463,57 +463,47 @@ class _GroupChatRoomState extends State<GroupChatRoom>
             ],
           )
         : Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            verticalDirection: VerticalDirection.down,
+            crossAxisAlignment: CrossAxisAlignment.end, // time sender
+            verticalDirection: VerticalDirection.down, // time sender
             mainAxisAlignment:
                 sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             children: [
               sendByMe
                   ? Container(
-                      color: Colors.amber,
-                      padding: const EdgeInsets.only(right: 5),
+                      margin: const EdgeInsets.only(bottom: 10),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.end, // time receiver
+                        verticalDirection:
+                            VerticalDirection.down, // time receiver
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            margin: const EdgeInsets.symmetric(vertical: 12),
-                            child: Text(
-                              MyDateUtil.getLastMessageTime(
-                                  context: context,
-                                  time:
-                                      chatMap['time'].microsecondsSinceEpoch ~/
+                            margin: const EdgeInsets.only(bottom: 5),
+                            child: Column(
+                              children: [
+                                chatMap['cread'] == ''
+                                    ? const SizedBox()
+                                    : const Text(
+                                        'Read',
+                                        style: TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                Text(
+                                  MyDateUtil.getLastMessageTime(
+                                      context: context,
+                                      time: chatMap['time']
+                                              .microsecondsSinceEpoch ~/
                                           1000),
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontSize: 10,
-                              ),
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          // Column(
-                          //   children: [
-                          //     chatMap['cread'] == ''
-                          //         ? const SizedBox()
-                          //         : const Text(
-                          //             'Read',
-                          //             style: TextStyle(
-                          //               color: Colors.black87,
-                          //               fontSize: 10,
-                          //             ),
-                          //           ),
-                          //     Text(
-                          //       MyDateUtil.getLastMessageTime(
-                          //           context: context,
-                          //           time: chatMap['time']
-                          //                   .microsecondsSinceEpoch ~/
-                          //               1000),
-                          //       style: const TextStyle(
-                          //         color: Colors.black87,
-                          //         fontSize: 10,
-                          //       ),
-                          //     ),
-                          //   ],
-                          // ),
                           chatMap['type'] == 'text'
                               ? Container(
                                   padding: const EdgeInsets.all(8),
@@ -611,37 +601,50 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                           ))
                                       : chatMap['type'].startsWith('.xls') ||
                                               chatMap['type'].startsWith('.csv')
-                                          ? Container(
-                                              margin:
-                                                  const EdgeInsets.symmetric(
+                                          ? GestureDetector(
+                                              onTap: (() {
+                                                _launchUrl(chatMap['message']);
+                                              }),
+                                              child: Container(
+                                                  margin: const EdgeInsets
+                                                      .symmetric(
                                                       vertical: 8,
                                                       horizontal: 10),
-                                              decoration: const BoxDecoration(
-                                                  color: Colors.transparent,
-                                                  borderRadius:
-                                                      BorderRadius.all(
-                                                          Radius.circular(10))),
-                                              constraints: const BoxConstraints(
-                                                minWidth: 80.0,
-                                                minHeight: 120.0,
-                                                maxWidth: 180.0,
-                                                maxHeight: 200.0,
-                                              ),
-                                              child: Column(
-                                                children: [
-                                                  Image.asset(
-                                                    'images/Excel.png',
-                                                    width: 65,
-                                                    fit: BoxFit.cover,
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                          color: Colors
+                                                              .transparent,
+                                                          borderRadius:
+                                                              BorderRadius.all(
+                                                                  Radius
+                                                                      .circular(
+                                                                          10))),
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                    minWidth: 0.0,
+                                                    minHeight: 0.0,
+                                                    maxWidth: 180.0,
+                                                    maxHeight: 100.0,
                                                   ),
-                                                  Text(
-                                                    chatMap['alias'],
-                                                    maxLines: 3,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  )
-                                                ],
-                                              ))
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Image.asset(
+                                                        'images/Excel.png',
+                                                        width: 65,
+                                                        fit: BoxFit.cover,
+                                                      ),
+                                                      Text(
+                                                        chatMap['alias'],
+                                                        softWrap: true,
+                                                        maxLines: 3,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      )
+                                                    ],
+                                                  )),
+                                            )
                                           : chatMap['type'].startsWith('.pdf')
                                               ? GestureDetector(
                                                   onTap: (() {
@@ -768,8 +771,14 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                               )),
                                                         )
                                                       : Container(
-                                                          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                                          constraints: const BoxConstraints(
+                                                          margin:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  vertical: 8,
+                                                                  horizontal:
+                                                                      10),
+                                                          constraints:
+                                                              const BoxConstraints(
                                                             minWidth: 80.0,
                                                             minHeight: 120.0,
                                                             maxWidth: 180.0,
@@ -1206,21 +1215,6 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                   ],
                                                                 )),
                               ),
-                              // Column(
-                              //   children: [
-                              //     Text(
-                              //       MyDateUtil.getLastMessageTime(
-                              //           context: context,
-                              //           time: chatMap['time']
-                              //                   .microsecondsSinceEpoch ~/
-                              //               1000),
-                              //       style: const TextStyle(
-                              //         color: Colors.black87,
-                              //         fontSize: 10,
-                              //       ),
-                              //     ),
-                              //   ],
-                              // )
                             ],
                           ),
                         ],
@@ -1232,8 +1226,6 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                       chatMap['status'] == 'Unsend'
                   ? const SizedBox()
                   : Column(
-                      // crossAxisAlignment: CrossAxisAlignment.start,
-                      // mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12),

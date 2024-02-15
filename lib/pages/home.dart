@@ -372,7 +372,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   }
 
   Widget buildUserList(data) {
-    // log('$xi, $yi');
+    // log('${_auth.currentUser!.displayName}');
     var chatRoomId = '';
     data!['recordType'] == 'Group'
         ? chatRoomId = data!['groupId']

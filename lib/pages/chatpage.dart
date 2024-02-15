@@ -211,7 +211,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
       crossAxisAlignment:
           sendByMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      verticalDirection: VerticalDirection.down,
+      verticalDirection: VerticalDirection.down, //sender picture / time
       children: [
         status == 'Delete'
             ? const SizedBox()
@@ -256,14 +256,14 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                         margin: const EdgeInsets.symmetric(vertical: 10),
                         padding: const EdgeInsets.only(right: 5),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.start, //receiver
                           verticalDirection: VerticalDirection.down,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.start,
                               verticalDirection: VerticalDirection.down,
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 read == ''
                                     ? const SizedBox()
@@ -297,8 +297,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                 ? const SizedBox()
                 : widget.profileurl.isEmpty
                     ? Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        verticalDirection: VerticalDirection.up,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        verticalDirection: VerticalDirection.down,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
@@ -317,7 +317,10 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                               )),
                         ],
                       )
-                    : Column(
+                    :
+                    // Container(
+                    // color: Colors.amber,
+                    Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         verticalDirection: VerticalDirection.up,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -333,6 +336,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                           ),
                         ],
                       ),
+        // ),
         status == 'Delete' || status == 'Unsend'
             ? const SizedBox()
             : type == 'text'
@@ -604,30 +608,42 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
             ? const SizedBox()
             : sendByMe
                 ? const SizedBox()
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.max,
-                    verticalDirection: VerticalDirection.down,
-                    children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisSize: MainAxisSize.max,
-                        verticalDirection: VerticalDirection.down,
-                        children: [
-                          Text(
-                            MyDateUtil.getLastMessageTime(
-                                context: context,
-                                time: time.microsecondsSinceEpoch ~/ 1000),
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              fontSize: 10,
+                : Container(
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    padding: const EdgeInsets.only(right: 5),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end, //sender
+                      verticalDirection: VerticalDirection.up,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          verticalDirection: VerticalDirection.down,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            read == ''
+                                ? const SizedBox()
+                                : const Text(
+                                    'Read',
+                                    textAlign: TextAlign.end,
+                                    style: TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                            Text(
+                              MyDateUtil.getLastMessageTime(
+                                  context: context,
+                                  time: time.microsecondsSinceEpoch ~/ 1000),
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontSize: 10,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   )
       ],
     );
@@ -1075,6 +1091,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                 maxHeight: 480,
                                 maxWidth: 640,
                               );
+                              const CircularProgressIndicator();
                               for (var image in images) {
                                 setState(() => _isUploading = true);
                                 await sendChatImage(
