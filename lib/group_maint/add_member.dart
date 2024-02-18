@@ -131,6 +131,20 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
         };
         DatabaseMethods()
             .addMessage('groups', widget.groupId, newMessageId, chatData);
+
+        Map<String, dynamic> lastMessageInfoMap = {
+          'chatRoomId': widget.groupId,
+          'lastMessage':
+              '${_auth.currentUser!.displayName} Add ${membersList[i]['Name']} in group.',
+          'lastMessageSentTs': formatedDate,
+          'time': FieldValue.serverTimestamp(),
+          'lastMessageSendBy': 'Administrator',
+          'messageId': newMessageId,
+          'type': 'notify',
+          'alert': FieldValue.serverTimestamp(),
+        };
+        DatabaseMethods()
+            .updateLastMessageSend(widget.groupId, lastMessageInfoMap);
       }
     }
     for (int i = 0; i < membersList.length; i++) {
@@ -146,7 +160,9 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
     Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
             builder: (_) => GroupMaintenance(
-                groupName: widget.groupName, groupId: widget.groupId)),
+                  groupName: widget.groupName,
+                  groupId: widget.groupId,
+                )),
         (route) => false);
   }
 
@@ -163,7 +179,9 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
     Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
             builder: (_) => GroupMaintenance(
-                groupName: widget.groupName, groupId: widget.groupId)),
+                  groupName: widget.groupName,
+                  groupId: widget.groupId,
+                )),
         (route) => false);
   }
 
@@ -295,7 +313,7 @@ class _AddMembersInGroupState extends State<AddMembersInGroup> {
                         elevation: 5),
                     onPressed: onAddMembers,
                     child: const Text(
-                      'Update Group',
+                      'Update',
                       style: TextStyle(color: Color.fromARGB(255, 3, 24, 141)),
                     ),
                   ),

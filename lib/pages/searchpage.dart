@@ -287,11 +287,13 @@ class _SearchPageState extends State<SearchPage> {
                   Navigator.pushReplacement(context,
                       MaterialPageRoute(builder: (context) {
                     return ChatPage(
-                        type: data['Type'],
-                        name: data['Name'],
-                        profileurl: data['Photo'],
-                        username: data['username'],
-                        page: 'Search');
+                      type: data['Type'],
+                      name: data['Name'],
+                      profileurl: data['Photo'],
+                      username: data['username'],
+                      page: 'Search',
+                      userUid: data['Id'],
+                    );
                   }));
                 },
                 child: Row(

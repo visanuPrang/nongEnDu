@@ -208,8 +208,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   void initState() {
     // super.activate();
     super.initState();
+    _firestore.settings = const Settings(persistenceEnabled: false);
     WidgetsBinding.instance.addObserver(this);
-    setStatus('Offline');
     ontheload();
     getCurrentUserDetails();
     // listAllUser();
@@ -339,6 +339,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                                 //   debugPrint(
                                 //       "no data=>$roomId [${lastMessageMap.length}]");
                                 // }
+                                // log('${snapshot.data!.docs[index]['lastIn']}');
                                 if (snapshot.data!.docs[index]['Name'] ==
                                         myName ||
                                     snapshot.data!.docs[index]['recordType'] ==
@@ -379,7 +380,9 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         : chatRoomId = getChatRoomIdbyUsername(data!['Name'], myName!);
 
     listAllLastMessage(chatRoomId);
-    // log('$lastMessageMap');
+    // log('lastMessageMap$lastMessageMap');
+    // log('lastMessageMap.length${lastMessageMap.length}');
+    // log('lastMessageMap.toSet().length${lastMessageMap.toSet().toList().length}');
     // log('${lastMessageMap.length}');
     var inArray = lastMessageMap.length + 1;
     // Future aGLMG;
@@ -432,7 +435,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                         name: data!['Name'],
                         profileurl: data!['Photo'],
                         username: data!['username'],
-                        page: 'Home');
+                        page: 'Home',
+                        userUid: data!['Id']);
                   }))
                 : Navigator.of(context).push(
                     MaterialPageRoute(
@@ -532,6 +536,14 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                           color: data!['status'] == 'Online'
                               ? const Color.fromARGB(255, 83, 154, 2)
                               : const Color.fromARGB(255, 166, 3, 3),
+                        ),
+                        SizedBox(
+                          child: Text(
+                              MyDateUtil.getLastMessageTime(
+                                  context: context,
+                                  time: data!['lastIn'].millisecondsSinceEpoch),
+                              style:
+                                  const TextStyle(color: Colors.transparent)),
                         ),
                       ],
                     ),

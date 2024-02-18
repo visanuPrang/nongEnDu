@@ -14,7 +14,14 @@ import 'package:random_string/random_string.dart';
 import 'package:screenshot/screenshot.dart';
 
 class KeyboardInsertedContentApp extends StatefulWidget {
-  final String type, name, profileurl, username, page, chatRoomId, myProfilePic;
+  final String type,
+      name,
+      profileurl,
+      username,
+      page,
+      chatRoomId,
+      myProfilePic,
+      userUid;
   const KeyboardInsertedContentApp(
       {super.key,
       required this.type,
@@ -23,7 +30,8 @@ class KeyboardInsertedContentApp extends StatefulWidget {
       required this.username,
       required this.page,
       required this.chatRoomId,
-      required this.myProfilePic});
+      required this.myProfilePic,
+      required this.userUid});
 
   @override
   State<KeyboardInsertedContentApp> createState() =>
@@ -37,7 +45,7 @@ class _KeyboardInsertedContentAppState
   ScreenshotController screenshotController = ScreenshotController();
   late String newMessageId;
   Uint8List? bytes;
-  bool _focus = true;
+  bool _focus = true, _isUploading = false;
 
   @override
   void dispose() {
@@ -118,10 +126,7 @@ class _KeyboardInsertedContentAppState
                 MaterialButton(
                   onPressed: () {
                     setState(() async {
-                      const CircularProgressIndicator(
-                        semanticsLabel: 'loading...',
-                        color: Color.fromARGB(255, 2, 7, 106),
-                      );
+                      _isUploading = true;
                       var usersGroup =
                           widget.type == 'Person' ? 'chatrooms' : 'groups';
                       await saveImageFile(bytes, widget.chatRoomId,
@@ -136,7 +141,9 @@ class _KeyboardInsertedContentAppState
                                 page: widget.page,
                                 profileurl: widget.profileurl,
                                 type: widget.type,
-                                username: widget.username)
+                                username: widget.username,
+                                userUid: widget.userUid,
+                              )
                             : GroupChatRoom(
                                 groupName: widget.name,
                                 groupChatId: widget.chatRoomId,
@@ -161,6 +168,7 @@ class _KeyboardInsertedContentAppState
               ],
             ),
           ),
+          _isUploading ? const CircularProgressIndicator() : const SizedBox(),
           // if (bytes != null)
           //   const Text("Here's the most recently inserted content:"),
           // if (bytes != null) Image.memory(bytes!),
@@ -233,6 +241,7 @@ class _KeyboardInsertedContentAppState
             .updateLastMessageSend(chatRoomId!, lastMessageInfoMap);
       });
     }
+    _isUploading = false;
   }
 
   genMsgID() {

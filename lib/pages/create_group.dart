@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -26,7 +28,7 @@ class _CreateGroupState extends State<CreateGroup> {
     });
 
     String groupId = const Uuid().v1();
-
+    log('create group');
     await _firestore.collection('groups').doc(groupId).set({
       'members': widget.membersList,
       'Id': groupId,
@@ -35,6 +37,7 @@ class _CreateGroupState extends State<CreateGroup> {
       'adminUID': _auth.currentUser!.uid,
       'Photo': ''
     });
+    log('add group into user');
     // add group into all user in group
     for (int i = 0; i < widget.membersList.length; i++) {
       String uid = widget.membersList[i]['uid'];
@@ -50,6 +53,7 @@ class _CreateGroupState extends State<CreateGroup> {
         'Photo': ''
       });
     }
+    log('create notification message');
     var sendTime = DateFormat('kk:mm:ss').format(DateTime.now());
     var sendDate = DateFormat('dd-MM-yyyy').format(DateTime.now());
     //adding chats collaction
@@ -62,6 +66,7 @@ class _CreateGroupState extends State<CreateGroup> {
       'time': FieldValue.serverTimestamp()
     });
 
+    log('create group information');
     Map<String, dynamic> userGroupInfoMap = {
       'recordType': 'Group',
       'Name': _groupName.text,
@@ -72,8 +77,8 @@ class _CreateGroupState extends State<CreateGroup> {
     };
 
     await DatabaseMethods().addUserGroupDetails(userGroupInfoMap, groupId);
-
-    //adding chats collaction
+    // no needs
+    // log('create member list information');
     // for (int i = 0; i < widget.membersList.length; i++) {
     //   await _firestore
     //       .collection('groups')
@@ -89,6 +94,7 @@ class _CreateGroupState extends State<CreateGroup> {
     //     'createDateTime': FieldValue.serverTimestamp()
     //   });
     // }
+    log('============= end =============');
 
     Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const ChatHomePage()),

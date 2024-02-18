@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -42,7 +41,7 @@ class _GroupChatRoomState extends State<GroupChatRoom>
   final TextEditingController chatMessage = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  late StreamController<int> _controller;
+  // late StreamController<int> _controller;
   List<Map<String, dynamic>> currUser = [];
   List<String> imageUrls = [];
   bool _isUploading = false, _showMore = false;
@@ -65,15 +64,12 @@ class _GroupChatRoomState extends State<GroupChatRoom>
   @override
   void initState() {
     super.initState();
-    Firebase.initializeApp();
-    FirebaseFirestore.instance.settings =
-        const Settings(persistenceEnabled: false);
     WidgetsBinding.instance.addObserver(this);
     setStatus('Online');
     getCurrentUserDetails();
     updateLoginTime();
-    log('DateTime.now().microsecondsSinceEpoch${DateTime.now().microsecondsSinceEpoch}');
-    log('DateTime.now()${DateTime.now()}');
+    log('${DateTime.now().microsecondsSinceEpoch}');
+    log('${DateTime.now()}');
   }
 
   // @override
@@ -159,41 +155,22 @@ class _GroupChatRoomState extends State<GroupChatRoom>
         .update({'lastIn': FieldValue.serverTimestamp()});
   }
 
-  // Future<QuerySnapshot> getLoginTime() async {
-  //   QuerySnapshot querySnapshot = await _firestore
-  //       .collection('users')
-  //       .doc(_auth.currentUser!.uid)
-  //       .collection('groups')
-  //       .doc(widget.groupChatId)
-  //       .get()
-  //       .then(
-  //     (DocumentSnapshot documentSnapshot) {
-  //       //  var loginTime =documentSnapshot.data();
-  //       if (documentSnapshot.exists) {
-  //         return documentSnapshot.data();
-  //       }
-  //     },
-  //   );
-  //   // log("loginTime['Id']==>$loginTime");
-  // }
-
-  // getLoginTime() {
-  //   log('${_auth.currentUser!.uid}  ${widget.groupChatId} ${_auth.currentUser!.displayName}');
-  //   _firestore
-  //       .collection('users')
-  //       .doc(_auth.currentUser!.uid)
-  //       .collection('groups')
-  //       .doc(widget.groupChatId)
-  //       .get()
-  //       .then((DocumentSnapshot documentSnapshot) {
-  //     if (documentSnapshot.exists) {
-  //       log('${documentSnapshot.data()}');
-  //       return documentSnapshot.data();
-  //     }
-  //     log('Document does not exist on the database');
-  //     return 'n/a';
-  //   });
-  // }
+  getLoginTime() async {
+    // log('${_auth.currentUser!.uid}  ${widget.groupChatId}');
+    _firestore
+        .collection('users')
+        .doc(_auth.currentUser!.uid)
+        .collection('groups')
+        .doc(widget.groupChatId)
+        .get()
+        .then((DocumentSnapshot documentSnapshot) {
+      if (documentSnapshot.exists) {
+        return documentSnapshot.data();
+      }
+      // debugPrint('Document does not exist on the database');
+      return 'n/a';
+    });
+  }
 
   updateMessageRead(messageId, countRead) {
     _firestore
@@ -221,7 +198,6 @@ class _GroupChatRoomState extends State<GroupChatRoom>
       )));
     });
     final messageText = await ref.getDownloadURL();
-    setState(() => _isUploading = false);
     await onSendMessage(messageText, ext, newMessageId, fileName, 'image');
   }
 
@@ -243,7 +219,6 @@ class _GroupChatRoomState extends State<GroupChatRoom>
       )));
     });
     final messageText = await ref.getDownloadURL();
-    setState(() => _isUploading = false);
     await onSendMessage(messageText, ext, newMessageId, fileName, ext);
   }
 
@@ -265,13 +240,11 @@ class _GroupChatRoomState extends State<GroupChatRoom>
         'alias': alias,
         'messageId': newMessageId,
         'status': '',
-        'statusTime': '',
+        'statusTime': ''
       };
-      log('x==>$newMessageId ${widget.groupChatId}');
       DatabaseMethods()
-          .addMessage('groups', widget.groupChatId, newMessageId, chatData)
+          .addMessage('groups', widget.groupChatId, newMessageId!, chatData)
           .then((value) {
-        log('0==>${widget.groupChatId}');
         Map<String, dynamic> lastMessageInfoMap = {
           'chatRoomId': widget.groupChatId,
           'lastMessage': type != 'text' ? alias : messageText,
@@ -279,27 +252,12 @@ class _GroupChatRoomState extends State<GroupChatRoom>
           'time': FieldValue.serverTimestamp(),
           'lastMessageSendBy': user!.displayName,
           'messageId': newMessageId,
-          'type': type,
-          'alert': FieldValue.serverTimestamp(),
+          'type': type
         };
         DatabaseMethods()
             .updateLastMessageSend(widget.groupChatId, lastMessageInfoMap);
-        log('1==>${widget.groupChatId}');
-
-        _firestore
-            .collection('users')
-            .doc(widget.groupChatId)
-            .update({'lastIn': FieldValue.serverTimestamp()});
-        log('2==>${widget.groupChatId}');
-
-        _firestore
-            .collection('users')
-            .doc(_auth.currentUser!.uid)
-            .update({'lastIn': FieldValue.serverTimestamp()});
-        log('3==>${_auth.currentUser!.uid}');
 
         _message.clear();
-        setState(() => _isUploading = false);
 
         // await _firestore
         //     .collection('groups')
@@ -323,11 +281,16 @@ class _GroupChatRoomState extends State<GroupChatRoom>
         child: Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(
+            Icons.arrow_back,
+          ),
           onPressed: () {
             // Navigator.push( context, MaterialPageRoute( builder: (context) => SecondPage()), ).then((value) => setState(() {}));
             updateLoginTime();
+            // _firestore.terminate(); //.clearPersistence();
             // dispose();
+            // _controller.close();
+            // _firestore.terminate();
             // WidgetsBinding.instance.addObserver(this);
             // setStatus('Offline');
             // Navigator.of(context).pushReplacementNamed(context, '/ChatHomePage');
@@ -335,14 +298,13 @@ class _GroupChatRoomState extends State<GroupChatRoom>
             //   context,
             //   '/ChatHomePage',
             // ).then((value) => setState(() {}));
-            // _controller.close();
-            _firestore.settings = const Settings(persistenceEnabled: false);
-            _firestore.clearPersistence();
-            _firestore.terminate();
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) {
-              return const ChatHomePage();
-            }));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ChatHomePage()),
+            ).then((value) => setState(() {
+                  WidgetsBinding.instance.addObserver(this);
+                  // setStatus('Offline');
+                }));
           },
         ),
         title: Row(
@@ -366,12 +328,12 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                   ),
               icon: const Icon(Icons.more_vert)),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(
+              Icons.logout,
+              color: Colors.white70,
+            ),
             onPressed: () {
               setStatus('Offline');
-              _firestore.settings = const Settings(persistenceEnabled: false);
-              _firestore.clearPersistence();
-              _firestore.terminate();
               _auth.signOut().then((value) {
                 Navigator.pushReplacement(context,
                     MaterialPageRoute(builder: (context) {
@@ -417,33 +379,29 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                           itemCount: snapshot.data!.docs.length,
                           itemBuilder: (context, index) {
                             DocumentSnapshot ds = snapshot.data!.docs[index];
-                            // // log('${snapshot.data!.docs[index]['sendBy']} ${snapshot.data!.docs[index]['messageId']}');
-                            // if (snapshot.data!.docs[index]['sendBy']
-                            //         .toString() !=
-                            //     _auth.currentUser!.displayName.toString()) {
-                            //   if (snapshot.data!.docs[index]['type'] !=
-                            //           'notify' &&
-                            //       snapshot.data!.docs[index]['sendBy'] !=
-                            //           _auth.currentUser!.displayName) {
-                            //     var arrLastIn = getLoginTime();
-                            //     log("${snapshot.data!.docs[index]['sendBy']} ${_auth.currentUser!.displayName}");
-                            //     // if (arrLastIn != null) {
-                            //     log("arrLastIn===>${arrLastIn}");
-                            //     // }
+                            // log('${snapshot.data!.docs[index]['sendBy']} ${snapshot.data!.docs[index]['messageId']}');
+                            if (snapshot.data!.docs[index]['sendBy']
+                                    .toString() !=
+                                _auth.currentUser!.displayName.toString()) {
+                              if (snapshot.data!.docs[index]['type'] !=
+                                      'notify' &&
+                                  snapshot.data!.docs[index]['sendBy'] !=
+                                      _auth.currentUser!.displayName) {
+                                // var arrLastIn = getLoginTime();
 
-                            //     lastIn = DateTime.now()
-                            //         .millisecondsSinceEpoch; //int.parse(arrLastIn['lastIn']);
+                                lastIn = DateTime.now().millisecondsSinceEpoch -
+                                    000; //int.parse(arrLastIn['lastIn']);
+                                log('$lastIn');
 
-                            //     if (lastIn <=
-                            //         DateTime.now().millisecondsSinceEpoch) {
-                            //       log('lastIn$lastIn');
-                            //       updateMessageRead(
-                            //           snapshot.data!.docs[index]['messageId'],
-                            //           snapshot.data!.docs[index]['countRead']);
-                            //       updateLoginTime();
-                            //     }
-                            //   }
-                            // }
+                                if (lastIn <=
+                                    DateTime.now().millisecondsSinceEpoch) {
+                                  updateMessageRead(
+                                      snapshot.data!.docs[index]['messageId'],
+                                      snapshot.data!.docs[index]['countRead']);
+                                  updateLoginTime();
+                                }
+                              }
+                            }
                             Map<String, dynamic> chatMap =
                                 snapshot.data!.docs[index].data()
                                     as Map<String, dynamic>;
@@ -634,7 +592,7 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                             VerticalDirection.down, // time receiver
                         children: [
                           Container(
-                            margin: const EdgeInsets.only(bottom: 5, right: 5),
+                            margin: const EdgeInsets.only(bottom: 5),
                             child: Column(
                               children: [
                                 chatMap['cread'] == ''
@@ -649,8 +607,8 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                 Text(
                                   MyDateUtil.getLastMessageTime(
                                       context: context,
-                                      time: (chatMap['time']!
-                                              .microsecondsSinceEpoch!) ~/
+                                      time: chatMap['time']
+                                              .microsecondsSinceEpoch ~/
                                           1000),
                                   style: const TextStyle(
                                     color: Colors.black87,
@@ -762,8 +720,10 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                 _launchUrl(chatMap['message']);
                                               }),
                                               child: Container(
-                                                  padding:
-                                                      const EdgeInsets.all(5),
+                                                  margin: const EdgeInsets
+                                                      .symmetric(
+                                                      vertical: 8,
+                                                      horizontal: 10),
                                                   decoration:
                                                       const BoxDecoration(
                                                           color: Colors
@@ -775,30 +735,26 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                           10))),
                                                   constraints:
                                                       const BoxConstraints(
-                                                    minWidth: 100.0,
-                                                    minHeight: 80.0,
-                                                    maxWidth: 200.0,
-                                                    maxHeight: 125.0,
+                                                    minWidth: 0.0,
+                                                    minHeight: 0.0,
+                                                    maxWidth: 180.0,
+                                                    maxHeight: 100.0,
                                                   ),
                                                   child: Column(
                                                     mainAxisSize:
                                                         MainAxisSize.min,
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment.end,
                                                     children: [
                                                       Image.asset(
                                                         'images/Excel.png',
                                                         width: 65,
                                                         fit: BoxFit.cover,
                                                       ),
-                                                      Flexible(
-                                                        child: Text(
-                                                          chatMap['alias'],
-                                                          softWrap: true,
-                                                          maxLines: 3,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                        ),
+                                                      Text(
+                                                        chatMap['alias'],
+                                                        softWrap: true,
+                                                        maxLines: 3,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                       )
                                                     ],
                                                   )),
@@ -810,36 +766,30 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                         chatMap['message']);
                                                   }),
                                                   child: Container(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              5),
+                                                      margin: const EdgeInsets
+                                                          .symmetric(
+                                                          vertical: 8,
+                                                          horizontal: 10),
                                                       constraints:
                                                           const BoxConstraints(
-                                                        minWidth: 100.0,
-                                                        minHeight: 80.0,
-                                                        maxWidth: 200.0,
-                                                        maxHeight: 125.0,
+                                                        minWidth: 80.0,
+                                                        minHeight: 120.0,
+                                                        maxWidth: 180.0,
+                                                        maxHeight: 200.0,
                                                       ),
                                                       child: Column(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .end,
                                                         children: [
                                                           Image.asset(
                                                             'images/pdfLogo.png',
                                                             width: 65,
                                                             fit: BoxFit.cover,
                                                           ),
-                                                          Flexible(
-                                                            child: Text(
-                                                              chatMap['alias'],
-                                                              maxLines: 3,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                            ),
+                                                          Text(
+                                                            chatMap['alias'],
+                                                            maxLines: 3,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
                                                           )
                                                         ],
                                                       )),
@@ -852,23 +802,20 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                             chatMap['message']);
                                                       }),
                                                       child: Container(
-                                                          padding:
+                                                          margin:
                                                               const EdgeInsets
-                                                                  .all(5),
+                                                                  .symmetric(
+                                                                  vertical: 8,
+                                                                  horizontal:
+                                                                      10),
                                                           constraints:
                                                               const BoxConstraints(
-                                                            minWidth: 100.0,
-                                                            minHeight: 80.0,
-                                                            maxWidth: 200.0,
-                                                            maxHeight: 125.0,
+                                                            minWidth: 80.0,
+                                                            minHeight: 120.0,
+                                                            maxWidth: 180.0,
+                                                            maxHeight: 200.0,
                                                           ),
                                                           child: Column(
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .min,
-                                                            mainAxisAlignment:
-                                                                MainAxisAlignment
-                                                                    .end,
                                                             children: [
                                                               Image.asset(
                                                                 'images/powerpoint.png',
@@ -876,15 +823,13 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                 fit: BoxFit
                                                                     .cover,
                                                               ),
-                                                              Flexible(
-                                                                child: Text(
-                                                                  chatMap[
-                                                                      'alias'],
-                                                                  maxLines: 3,
-                                                                  overflow:
-                                                                      TextOverflow
-                                                                          .ellipsis,
-                                                                ),
+                                                              Text(
+                                                                chatMap[
+                                                                    'alias'],
+                                                                maxLines: 3,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
                                                               )
                                                             ],
                                                           )),
@@ -897,16 +842,21 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                 'message']);
                                                           }),
                                                           child: Container(
-                                                              padding:
+                                                              margin:
                                                                   const EdgeInsets
-                                                                      .all(5),
+                                                                      .symmetric(
+                                                                      vertical:
+                                                                          8,
+                                                                      horizontal:
+                                                                          10),
                                                               constraints:
                                                                   const BoxConstraints(
-                                                                minWidth: 100.0,
-                                                                minHeight: 80.0,
-                                                                maxWidth: 200.0,
+                                                                minWidth: 80.0,
+                                                                minHeight:
+                                                                    120.0,
+                                                                maxWidth: 180.0,
                                                                 maxHeight:
-                                                                    125.0,
+                                                                    200.0,
                                                               ),
                                                               decoration: const BoxDecoration(
                                                                   color: Colors
@@ -916,12 +866,6 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                           Radius.circular(
                                                                               10))),
                                                               child: Column(
-                                                                mainAxisSize:
-                                                                    MainAxisSize
-                                                                        .min,
-                                                                mainAxisAlignment:
-                                                                    MainAxisAlignment
-                                                                        .end,
                                                                 children: [
                                                                   Image.asset(
                                                                     'images/MSWord.png',
@@ -929,38 +873,32 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                     fit: BoxFit
                                                                         .cover,
                                                                   ),
-                                                                  Flexible(
-                                                                    child: Text(
-                                                                      chatMap[
-                                                                          'alias'],
-                                                                      maxLines:
-                                                                          3,
-                                                                      overflow:
-                                                                          TextOverflow
-                                                                              .ellipsis,
-                                                                    ),
+                                                                  Text(
+                                                                    chatMap[
+                                                                        'alias'],
+                                                                    maxLines: 3,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
                                                                   )
                                                                 ],
                                                               )),
                                                         )
                                                       : Container(
-                                                          padding:
+                                                          margin:
                                                               const EdgeInsets
-                                                                  .all(5),
+                                                                  .symmetric(
+                                                                  vertical: 8,
+                                                                  horizontal:
+                                                                      10),
                                                           constraints:
                                                               const BoxConstraints(
-                                                            minWidth: 100.0,
-                                                            minHeight: 80.0,
-                                                            maxWidth: 200.0,
-                                                            maxHeight: 125.0,
+                                                            minWidth: 80.0,
+                                                            minHeight: 120.0,
+                                                            maxWidth: 180.0,
+                                                            maxHeight: 200.0,
                                                           ),
                                                           child: Column(
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .min,
-                                                            mainAxisAlignment:
-                                                                MainAxisAlignment
-                                                                    .end,
                                                             children: [
                                                               Image.asset(
                                                                 'images/unknown.png',
@@ -968,15 +906,13 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                 fit: BoxFit
                                                                     .cover,
                                                               ),
-                                                              Flexible(
-                                                                child: Text(
-                                                                  chatMap[
-                                                                      'alias'],
-                                                                  maxLines: 3,
-                                                                  overflow:
-                                                                      TextOverflow
-                                                                          .ellipsis,
-                                                                ),
+                                                              Text(
+                                                                chatMap[
+                                                                    'alias'],
+                                                                maxLines: 3,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
                                                               )
                                                             ],
                                                           )),
@@ -1197,10 +1133,10 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                             10))),
                                                         constraints:
                                                             const BoxConstraints(
-                                                          minWidth: 100.0,
-                                                          minHeight: 80.0,
-                                                          maxWidth: 200.0,
-                                                          maxHeight: 125.0,
+                                                          minWidth: 0.0,
+                                                          minHeight: 0.0,
+                                                          maxWidth: 180.0,
+                                                          maxHeight: 100.0,
                                                         ),
                                                         child: Column(
                                                           mainAxisSize:
@@ -1211,16 +1147,13 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                               width: 65,
                                                               fit: BoxFit.cover,
                                                             ),
-                                                            Flexible(
-                                                              child: Text(
-                                                                chatMap[
-                                                                    'alias'],
-                                                                softWrap: true,
-                                                                maxLines: 3,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis,
-                                                              ),
+                                                            Text(
+                                                              chatMap['alias'],
+                                                              softWrap: true,
+                                                              maxLines: 3,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
                                                             )
                                                           ],
                                                         )),
@@ -1243,18 +1176,15 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                         10),
                                                             constraints:
                                                                 const BoxConstraints(
-                                                              minWidth: 100.0,
-                                                              minHeight: 80.0,
-                                                              maxWidth: 200.0,
-                                                              maxHeight: 125.0,
+                                                              minWidth: 0.0,
+                                                              minHeight: 0.0,
+                                                              maxWidth: 180.0,
+                                                              maxHeight: 120.0,
                                                             ),
                                                             child: Column(
                                                               mainAxisSize:
                                                                   MainAxisSize
                                                                       .min,
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .end,
                                                               children: [
                                                                 Image.asset(
                                                                   'images/pdfLogo.png',
@@ -1262,17 +1192,15 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                   fit: BoxFit
                                                                       .cover,
                                                                 ),
-                                                                Flexible(
-                                                                  child: Text(
-                                                                    chatMap[
-                                                                        'alias'],
-                                                                    softWrap:
-                                                                        true,
-                                                                    maxLines: 3,
-                                                                    overflow:
-                                                                        TextOverflow
-                                                                            .ellipsis,
-                                                                  ),
+                                                                Text(
+                                                                  chatMap[
+                                                                      'alias'],
+                                                                  softWrap:
+                                                                      true,
+                                                                  maxLines: 3,
+                                                                  overflow:
+                                                                      TextOverflow
+                                                                          .ellipsis,
                                                                 )
                                                               ],
                                                             )),
@@ -1293,21 +1221,15 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                 constraints:
                                                                     const BoxConstraints(
                                                                   minWidth:
-                                                                      100.0,
-                                                                  minHeight:
                                                                       80.0,
+                                                                  minHeight:
+                                                                      120.0,
                                                                   maxWidth:
-                                                                      200.0,
+                                                                      180.0,
                                                                   maxHeight:
-                                                                      125.0,
+                                                                      200.0,
                                                                 ),
                                                                 child: Column(
-                                                                  mainAxisSize:
-                                                                      MainAxisSize
-                                                                          .min,
-                                                                  mainAxisAlignment:
-                                                                      MainAxisAlignment
-                                                                          .end,
                                                                   children: [
                                                                     Image.asset(
                                                                       'images/powerpoint.png',
@@ -1315,16 +1237,14 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                       fit: BoxFit
                                                                           .cover,
                                                                     ),
-                                                                    Flexible(
-                                                                      child:
-                                                                          Text(
-                                                                        chatMap[
-                                                                            'alias'],
-                                                                        maxLines:
-                                                                            3,
-                                                                        overflow:
-                                                                            TextOverflow.ellipsis,
-                                                                      ),
+                                                                    Text(
+                                                                      chatMap[
+                                                                          'alias'],
+                                                                      maxLines:
+                                                                          3,
+                                                                      overflow:
+                                                                          TextOverflow
+                                                                              .ellipsis,
                                                                     )
                                                                   ],
                                                                 )),
@@ -1354,32 +1274,26 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                         constraints:
                                                                             const BoxConstraints(
                                                                           minWidth:
-                                                                              100.0,
-                                                                          minHeight:
                                                                               80.0,
+                                                                          minHeight:
+                                                                              120.0,
                                                                           maxWidth:
-                                                                              200.0,
+                                                                              180.0,
                                                                           maxHeight:
-                                                                              125.0,
+                                                                              200.0,
                                                                         ),
                                                                         child:
                                                                             Column(
-                                                                          mainAxisSize:
-                                                                              MainAxisSize.min,
-                                                                          mainAxisAlignment:
-                                                                              MainAxisAlignment.end,
                                                                           children: [
                                                                             Image.asset(
                                                                               'images/MSWord.png',
                                                                               width: 65,
                                                                               fit: BoxFit.cover,
                                                                             ),
-                                                                            Flexible(
-                                                                              child: Text(
-                                                                                chatMap['alias'],
-                                                                                maxLines: 3,
-                                                                                overflow: TextOverflow.ellipsis,
-                                                                              ),
+                                                                            Text(
+                                                                              chatMap['alias'],
+                                                                              maxLines: 3,
+                                                                              overflow: TextOverflow.ellipsis,
                                                                             )
                                                                           ],
                                                                         )),
@@ -1388,21 +1302,15 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                 margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                                                                 constraints: const BoxConstraints(
                                                                   minWidth:
-                                                                      100.0,
-                                                                  minHeight:
                                                                       80.0,
+                                                                  minHeight:
+                                                                      120.0,
                                                                   maxWidth:
-                                                                      200.0,
+                                                                      180.0,
                                                                   maxHeight:
-                                                                      125.0,
+                                                                      200.0,
                                                                 ),
                                                                 child: Column(
-                                                                  mainAxisSize:
-                                                                      MainAxisSize
-                                                                          .min,
-                                                                  mainAxisAlignment:
-                                                                      MainAxisAlignment
-                                                                          .end,
                                                                   children: [
                                                                     Image.asset(
                                                                       'images/unknown.png',
@@ -1410,16 +1318,14 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                                                                       fit: BoxFit
                                                                           .cover,
                                                                     ),
-                                                                    Flexible(
-                                                                      child:
-                                                                          Text(
-                                                                        chatMap[
-                                                                            'alias'],
-                                                                        maxLines:
-                                                                            3,
-                                                                        overflow:
-                                                                            TextOverflow.ellipsis,
-                                                                      ),
+                                                                    Text(
+                                                                      chatMap[
+                                                                          'alias'],
+                                                                      maxLines:
+                                                                          3,
+                                                                      overflow:
+                                                                          TextOverflow
+                                                                              .ellipsis,
                                                                     ),
                                                                   ],
                                                                 )),
@@ -1435,14 +1341,10 @@ class _GroupChatRoomState extends State<GroupChatRoom>
                       chatMap['status'] == 'Unsend'
                   ? const SizedBox()
                   : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      verticalDirection: VerticalDirection.up,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          // margin: const EdgeInsets.symmetric(vertical: 5),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          margin: const EdgeInsets.symmetric(vertical: 12),
                           child: Text(
                             MyDateUtil.getLastMessageTime(
                                 context: context,
@@ -1461,202 +1363,178 @@ class _GroupChatRoomState extends State<GroupChatRoom>
   }
 
   Widget _chatInput() {
-    return _isUploading
-        ? const Center(
-            child: CircularProgressIndicator(),
-          )
-        : Container(
-            color: const Color.fromARGB(255, 224, 218, 228),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Card(
-                      color: const Color.fromARGB(255, 240, 237, 242),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20)),
-                      child: Row(
-                        children: [
-                          _showMore
-                              ? const SizedBox()
-                              : Expanded(
-                                  child: Container(
-                                  margin: const EdgeInsets.symmetric(
-                                      vertical: 2, horizontal: 2),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 5, horizontal: 10),
-                                  decoration: const BoxDecoration(
-                                      color: Color.fromARGB(150, 255, 255, 255),
-                                      borderRadius: BorderRadius.all(
-                                          Radius.circular(20))),
-                                  child: TextField(
-                                    controller: _message,
-                                    minLines: 1,
-                                    maxLines: 3,
-                                    keyboardType: TextInputType.multiline,
-                                    decoration: const InputDecoration(
-                                        hintText: 'Type a message...',
-                                        hintStyle:
-                                            TextStyle(color: Colors.blueAccent),
-                                        border: InputBorder.none),
-                                  ),
-                                )),
-                          _showMore
-                              ? IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _showMore = false;
-                                    });
-                                  },
-                                  icon: const Icon(Icons.arrow_forward_ios,
-                                      color: Colors.blueAccent))
-                              : IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _showMore = true;
-                                    });
-                                  },
-                                  icon: const Icon(Icons.arrow_back_ios,
-                                      color: Colors.blueAccent)),
-                          _showMore
-                              ? Row(children: [
-                                  IconButton(
-                                      onPressed: ()
-                                          //  => keyboardEmoji(),
-                                          {
-                                        _isUploading = true;
-                                        Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                                builder: (context) =>
-                                                    KeyboardInsertedContentApp(
-                                                      type: 'Group',
-                                                      name: widget.groupName,
-                                                      profileurl: currUser[0]
-                                                          ['Photo'],
-                                                      username: currUser[0]
-                                                          ['Name'],
-                                                      page: 'Group',
-                                                      chatRoomId:
-                                                          widget.groupChatId,
-                                                      myProfilePic: currUser[0]
-                                                          ['Photo'],
-                                                      userUid:
-                                                          widget.groupChatId,
-                                                    )));
-                                        _isUploading = false;
-                                      },
-                                      icon: const Icon(Icons.emoji_emotions,
-                                          color: Colors.blueAccent)),
-                                  IconButton(
-                                      onPressed: () async {
-                                        _isUploading = true;
-                                        FilePickerResult? result =
-                                            await FilePicker.platform.pickFiles(
-                                          dialogTitle: 'Select upload file...',
-                                          onFileLoading: (FilePickerStatus
-                                                  status) =>
-                                              const CircularProgressIndicator(),
-                                          lockParentWindow: true,
-                                          type: FileType.custom,
-                                          allowMultiple: true,
-                                          allowedExtensions: [
-                                            'csv',
-                                            'xls',
-                                            'xlsx',
-                                            'pdf',
-                                            'doc',
-                                            'docx',
-                                            'ppt',
-                                            'pptx'
-                                          ],
-                                        );
-
-                                        if (result != null) {
-                                          for (int i = 0;
-                                              i < result.files.length;
-                                              i++) {
-                                            PlatformFile file = result.files[0];
-                                            var filePath = '${file.path}';
-                                            await sendChatFile(
-                                                filePath, file.name);
-                                          }
-                                        } else {
-                                          // User canceled the picker
-                                          _isUploading = false;
-                                        }
-                                      },
-                                      icon: const Icon(Icons.upload_file,
-                                          color: Colors.blueAccent)),
-                                  IconButton(
-                                      onPressed: () async {
-                                        _isUploading = true;
-                                        final ImagePicker picker =
-                                            ImagePicker();
-                                        //pick an image
-                                        final List<XFile> images =
-                                            await picker.pickMultiImage(
-                                          imageQuality: 100,
-                                          maxHeight: 480,
-                                          maxWidth: 640,
-                                        );
-                                        for (var image in images) {
-                                          await sendChatImage(File(image.path),
-                                              image.name.substring(7));
-                                        }
-                                        _isUploading = false;
-                                      }, // => Navigator.pop(context),
-                                      icon: const Icon(Icons.image,
-                                          color: Colors.blueAccent)),
-                                  IconButton(
-                                      onPressed: () async {
-                                        _isUploading = true;
-                                        final ImagePicker picker =
-                                            ImagePicker();
-                                        //pick an image
-                                        final XFile? image =
-                                            await picker.pickImage(
-                                          source: ImageSource.camera,
-                                          imageQuality: 80,
-                                          maxHeight: 480,
-                                          maxWidth: 640,
-                                        );
-                                        if (image != null) {
-                                          await sendChatImage(
-                                              File(image.path), 'camara');
-                                        }
-                                      },
-                                      icon: const Icon(Icons.camera_alt_rounded,
-                                          color: Colors.blueAccent))
-                                ])
-                              : const SizedBox(),
-                        ],
+    return Container(
+      color: const Color.fromARGB(255, 224, 218, 228),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+        child: Row(
+          children: [
+            Expanded(
+              child: Card(
+                color: const Color.fromARGB(255, 240, 237, 242),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+                child: Row(
+                  children: [
+                    Expanded(
+                        child: Container(
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 2, horizontal: 2),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 2, horizontal: 2),
+                      decoration: const BoxDecoration(
+                          color: Color.fromARGB(150, 255, 255, 255),
+                          borderRadius: BorderRadius.all(Radius.circular(20))),
+                      child: TextField(
+                        controller: _message,
+                        minLines: 1,
+                        maxLines: 3,
+                        keyboardType: TextInputType.multiline,
+                        decoration: const InputDecoration(
+                            hintText: 'Type a message...',
+                            hintStyle: TextStyle(color: Colors.blueAccent),
+                            border: InputBorder.none),
                       ),
-                    ),
-                  ),
-                  MaterialButton(
-                    onPressed: () {
-                      newMessageId = genMsgID();
-                      onSendMessage(
-                          _message.text, '', newMessageId, '', 'text');
-                      // sendMessage(true);
-                    },
-                    minWidth: 0,
-                    padding: const EdgeInsets.only(
-                        top: 10, bottom: 10, right: 5, left: 5),
-                    shape: const CircleBorder(
-                        side: BorderSide(
-                            color: Color.fromARGB(255, 20, 20, 156), width: 3)),
-                    child: const Icon(
-                      Icons.telegram,
-                      color: Color.fromARGB(255, 20, 20, 156),
-                      size: 40,
-                    ),
-                  )
-                ],
+                    )),
+                    _showMore
+                        ? IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _showMore = false;
+                              });
+                            },
+                            icon: const Icon(Icons.arrow_forward_ios,
+                                color: Colors.blueAccent))
+                        : IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _showMore = true;
+                              });
+                            },
+                            icon: const Icon(Icons.arrow_back_ios,
+                                color: Colors.blueAccent)),
+                    _showMore
+                        ? Row(children: [
+                            IconButton(
+                                onPressed: ()
+                                    //  => keyboardEmoji(),
+                                    {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              KeyboardInsertedContentApp(
+                                                  type: 'Group',
+                                                  name: widget.groupName,
+                                                  profileurl: currUser[0]
+                                                      ['Photo'],
+                                                  username: currUser[0]['Name'],
+                                                  page: 'Group',
+                                                  chatRoomId:
+                                                      widget.groupChatId,
+                                                  myProfilePic: currUser[0]
+                                                      ['Photo'])));
+                                },
+                                icon: const Icon(Icons.emoji_emotions,
+                                    color: Colors.blueAccent)),
+                            IconButton(
+                                onPressed: () async {
+                                  FilePickerResult? result =
+                                      await FilePicker.platform.pickFiles(
+                                    dialogTitle: 'Select upload file...',
+                                    type: FileType.custom,
+                                    allowMultiple: true,
+                                    allowedExtensions: [
+                                      'csv',
+                                      'xls',
+                                      'xlsx',
+                                      'pdf',
+                                      'doc',
+                                      'docx',
+                                      'ppt',
+                                      'pptx'
+                                    ],
+                                  );
+
+                                  if (result != null) {
+                                    for (int i = 0;
+                                        i < result.files.length;
+                                        i++) {
+                                      PlatformFile file = result.files[0];
+                                      var filePath = '${file.path}';
+                                      await sendChatFile(filePath, file.name);
+                                    }
+                                  } else {
+                                    // User canceled the picker
+                                  }
+                                },
+                                icon: const Icon(Icons.upload_file,
+                                    color: Colors.blueAccent)),
+                            IconButton(
+                                onPressed: () async {
+                                  final ImagePicker picker = ImagePicker();
+                                  //pick an image
+                                  final List<XFile> images =
+                                      await picker.pickMultiImage(
+                                    imageQuality: 100,
+                                    maxHeight: 480,
+                                    maxWidth: 640,
+                                  );
+                                  for (var image in images) {
+                                    setState(() => _isUploading = true);
+                                    await sendChatImage(File(image.path),
+                                        image.name.substring(7));
+                                    setState(() => _isUploading = false);
+                                  }
+                                }, // => Navigator.pop(context),
+                                icon: const Icon(Icons.image,
+                                    color: Colors.blueAccent)),
+                            IconButton(
+                                onPressed: () async {
+                                  final ImagePicker picker = ImagePicker();
+                                  //pick an image
+                                  final XFile? image = await picker.pickImage(
+                                    source: ImageSource.camera,
+                                    imageQuality: 80,
+                                    maxHeight: 480,
+                                    maxWidth: 640,
+                                  );
+                                  if (image != null) {
+                                    setState(() => _isUploading = true);
+                                    await sendChatImage(
+                                        File(image.path), 'camara');
+                                    setState(() => _isUploading = false);
+                                  }
+                                },
+                                icon: const Icon(Icons.camera_alt_rounded,
+                                    color: Colors.blueAccent))
+                          ])
+                        : const SizedBox(),
+                  ],
+                ),
               ),
             ),
-          );
+            MaterialButton(
+              onPressed: () {
+                newMessageId = genMsgID();
+                onSendMessage(_message.text, '', newMessageId, '', 'text');
+                // sendMessage(true);
+              },
+              minWidth: 0,
+              padding:
+                  const EdgeInsets.only(top: 10, bottom: 10, right: 5, left: 5),
+              shape: const CircleBorder(
+                  side: BorderSide(
+                      color: Color.fromARGB(255, 20, 20, 156), width: 3)),
+              child: const Icon(
+                Icons.telegram,
+                color: Color.fromARGB(255, 20, 20, 156),
+                size: 40,
+              ),
+            )
+          ],
+        ),
+      ),
+    );
   }
 }

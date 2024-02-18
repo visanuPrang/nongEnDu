@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:developer';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -80,6 +82,8 @@ class DatabaseMethods {
 
   Future addMessage(String usersGroups, String chatRoomId, String messageId,
       Map<String, dynamic> messageInfoMap) async {
+    // debugPrint('Y==>$usersGroups $chatRoomId $messageId');
+    // debugPrint('$messageInfoMap');
     return FirebaseFirestore.instance
         .collection(usersGroups)
         .doc(chatRoomId)
@@ -152,7 +156,6 @@ class DatabaseMethods {
         .then((DocumentSnapshot documentSnapshot) {
       // debugPrint('$roomId=>${documentSnapshot.exists}');
       if (documentSnapshot.exists) {
-        log(1);
         return documentSnapshot.data();
       }
       // debugPrint('Document does not exist on the database');

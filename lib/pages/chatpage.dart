@@ -86,14 +86,15 @@ class CustomImageWidgetProvider extends EasyImageProvider {
 
 // -------------------- end --------------------
 class ChatPage extends StatefulWidget {
-  final String type, name, profileurl, username, page;
+  final String type, name, profileurl, username, page, userUid;
   const ChatPage(
       {super.key,
       required this.type, //= Person or Group
       required this.name, //= chat with
       required this.profileurl, //= picture url
       required this.username, //= chat with
-      required this.page}); //= Home or SearchPage
+      required this.page,
+      required this.userUid}); //= Home or SearchPage
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -259,9 +260,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                           mainAxisAlignment: MainAxisAlignment.start, //receiver
                           verticalDirection: VerticalDirection.down,
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Column(
                               mainAxisAlignment: MainAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               verticalDirection: VerticalDirection.down,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -435,20 +438,22 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                   _launchUrl(message);
                                 }),
                                 child: Container(
+                                    alignment: Alignment.centerRight,
                                     padding: const EdgeInsets.only(bottom: 10),
-                                    margin: const EdgeInsets.symmetric(
-                                        vertical: 8, horizontal: 10),
+                                    // margin: const EdgeInsets.symmetric(
+                                    //     vertical: 8, horizontal: 10),
                                     decoration: const BoxDecoration(
                                         color: Colors.transparent,
                                         borderRadius: BorderRadius.all(
                                             Radius.circular(10))),
                                     constraints: const BoxConstraints(
                                       minWidth: 100.0,
-                                      minHeight: 50.0,
-                                      maxWidth: 250.0,
-                                      maxHeight: 100.0,
+                                      minHeight: 80.0,
+                                      maxWidth: 200.0,
+                                      maxHeight: 125.0,
                                     ),
                                     child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
                                         Image.asset(
                                           'images/Excel.png',
@@ -458,6 +463,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                         Flexible(
                                           child: Text(
                                             alias,
+                                            // textAlign: TextAlign.right,
                                             maxLines: 3,
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -480,8 +486,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                         constraints: const BoxConstraints(
                                           minWidth: 100.0,
                                           minHeight: 50.0,
-                                          maxWidth: 250.0,
-                                          maxHeight: 100.0,
+                                          maxWidth: 200.0,
+                                          maxHeight: 125.0,
                                         ),
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
@@ -512,8 +518,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                             constraints: const BoxConstraints(
                                               minWidth: 100.0,
                                               minHeight: 50.0,
-                                              maxWidth: 250.0,
-                                              maxHeight: 100.0,
+                                              maxWidth: 200.0,
+                                              maxHeight: 125.0,
                                             ),
                                             child: Column(
                                               mainAxisSize: MainAxisSize.min,
@@ -554,8 +560,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                                     const BoxConstraints(
                                                   minWidth: 100.0,
                                                   minHeight: 50.0,
-                                                  maxWidth: 250.0,
-                                                  maxHeight: 100.0,
+                                                  maxWidth: 200.0,
+                                                  maxHeight: 125.0,
                                                 ),
                                                 child: Column(
                                                   mainAxisSize:
@@ -583,8 +589,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                             constraints: const BoxConstraints(
                                               minWidth: 100.0,
                                               minHeight: 50.0,
-                                              maxWidth: 250.0,
-                                              maxHeight: 100.0,
+                                              maxWidth: 200.0,
+                                              maxHeight: 125.0,
                                             ),
                                             child: Column(
                                               mainAxisSize: MainAxisSize.min,
@@ -621,16 +627,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                           verticalDirection: VerticalDirection.down,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            read == ''
-                                ? const SizedBox()
-                                : const Text(
-                                    'Read',
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 10,
-                                    ),
-                                  ),
                             Text(
                               MyDateUtil.getLastMessageTime(
                                   context: context,
@@ -835,6 +831,18 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         };
         DatabaseMethods()
             .updateLastMessageSend(chatRoomId!, lastMessageInfoMap);
+
+        //==== update 'lastIn' into chat user with (no need)
+        // _firestore
+        //     .collection('users')
+        //     .doc(widget.userUid)
+        //     .update({'lastIn': FieldValue.serverTimestamp()});
+
+        _firestore
+            .collection('users')
+            .doc(_auth.currentUser!.uid)
+            .update({'lastIn': FieldValue.serverTimestamp()});
+
         if (sendClicked) {
           messageId = null;
         }
@@ -898,16 +906,13 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           ),
           onPressed: () {
             _firestore.clearPersistence();
-            // _firestore.terminate();
+            _firestore.terminate();
             // Navigator.push( context, MaterialPageRoute( builder: (context) => SecondPage()), ).then((value) => setState(() {}));
             widget.page == 'Home'
                 ? Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const TempScreen()),
-                  ).then((value) => setState(() {
-                      WidgetsBinding.instance.addObserver(this);
-                      setStatus('Offline');
-                    }))
+                  ).then((value) => setState(() {}))
                 : Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -941,6 +946,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
             ),
             onPressed: () {
               _auth.signOut().then((value) {
+                WidgetsBinding.instance.addObserver(this);
+                setStatus('Offline');
+                _firestore.settings = const Settings(persistenceEnabled: false);
+                _firestore.clearPersistence();
+                _firestore.terminate();
                 Navigator.pushReplacement(context,
                     MaterialPageRoute(builder: (context) {
                   return const SignIn();
@@ -1018,7 +1028,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                               username: widget.username,
                                               page: widget.page,
                                               chatRoomId: chatRoomId!,
-                                              myProfilePic: myProfilePic!)));
+                                              myProfilePic: myProfilePic!,
+                                              userUid: widget.userUid)));
                             },
                             icon: const Icon(Icons.emoji_emotions,
                                 color: Colors.blueAccent))
@@ -1030,23 +1041,26 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                             },
                             icon: const Icon(Icons.arrow_forward_ios,
                                 color: Colors.blueAccent)),
-                    Expanded(
-                        child: Container(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 2, horizontal: 2),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 2, horizontal: 2),
-                      child: TextField(
-                        controller: messagecontroller,
-                        minLines: 1,
-                        maxLines: 3,
-                        keyboardType: TextInputType.multiline,
-                        decoration: const InputDecoration(
-                            hintText: 'Type a message...',
-                            hintStyle: TextStyle(color: Colors.blueAccent),
-                            border: InputBorder.none),
-                      ),
-                    )),
+                    _showMore
+                        ? const SizedBox()
+                        : Expanded(
+                            child: Container(
+                            margin: const EdgeInsets.symmetric(
+                                vertical: 2, horizontal: 2),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 2, horizontal: 2),
+                            child: TextField(
+                              controller: messagecontroller,
+                              minLines: 1,
+                              maxLines: 3,
+                              keyboardType: TextInputType.multiline,
+                              decoration: const InputDecoration(
+                                  hintText: 'Type a message...',
+                                  hintStyle:
+                                      TextStyle(color: Colors.blueAccent),
+                                  border: InputBorder.none),
+                            ),
+                          )),
                     _showMore
                         ? IconButton(
                             onPressed: () async {

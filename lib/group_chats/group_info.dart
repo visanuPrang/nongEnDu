@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:messagingapp/group_maint/add_member.dart';
@@ -54,7 +55,6 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
       if (sortMember == 0) {
         return a['Name'].compareTo(b['Name']);
       }
-      log('$membersList');
       var searchAdmin =
           membersList.firstWhere((dropdown) => dropdown['isAdmin'] == 'Admin');
       logAsAdmin = searchAdmin['Name'] == _auth.currentUser!.displayName;
@@ -91,6 +91,73 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
         });
   }
 
+  void showWDDialog(groupId) {
+    showDialog(
+        context: context,
+        builder: (_) {
+          return AlertDialog(
+            title: const Text(
+              'Confirm Delete Group !?',
+              style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 16,
+                  color: Color.fromARGB(255, 64, 21, 138)),
+            ),
+            actions: [
+              ElevatedButton(
+                  onPressed: (() {
+                    removeGroup(groupId);
+                    Navigator.of(context).pop();
+                  }),
+                  child: const Text('Yes')),
+              ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('No'))
+            ],
+          );
+        });
+  }
+
+  void removeGroup(groupId) async {
+    setState(() {
+      isLoading = true;
+    });
+
+    await _firestore.collection('chatrooms').doc(groupId).delete();
+
+    final batch = _firestore.batch();
+    var collection =
+        _firestore.collection('groups').doc(groupId).collection('chats');
+    var snapshots = await collection.get();
+    for (var doc in snapshots.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+
+    await _firestore.collection('groups').doc(groupId).delete();
+
+    await _firestore.collection('users').doc(groupId).delete();
+
+    for (int i = 0; i < membersList.length; i++) {
+      String uid = membersList[i]['uid'];
+      await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('groups')
+          .doc(groupId)
+          .delete();
+    }
+
+    Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const ChatHomePage()),
+        (route) => false);
+    // setState(() {
+    //   isLoading = false;
+    // });
+  }
+
   void removeUser(int index) async {
     setState(() {
       isLoading = true;
@@ -112,21 +179,16 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
         .delete();
 
     newMessageId = genMsgID();
-    DateTime now = DateTime.now();
-    String formatedDate = DateFormat('dd-MM-yyyy HH:mm').format(now);
+    var sendTime = DateFormat('kk:mm:ss').format(DateTime.now());
+    var sendDate = DateFormat('dd-MM-yyyy').format(DateTime.now());
     Map<String, dynamic> chatData = {
       'sendBy': 'Administrator',
       'message':
           '${_auth.currentUser!.displayName} Remove $removeUserName from group.',
       'time': FieldValue.serverTimestamp(),
-      'imgUrl': '',
-      'cread': '',
-      'ts': formatedDate,
       'type': 'notify',
-      'alias': '',
-      'messageId': '',
-      'status': '',
-      'statusTime': ''
+      'sendTime': sendTime,
+      'sendDate': sendDate
     };
     DatabaseMethods()
         .addMessage('groups', widget.groupId, newMessageId, chatData);
@@ -187,20 +249,15 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
         .delete();
 
     var newMessageId = genMsgID();
-    DateTime now = DateTime.now();
-    String formatedDate = DateFormat('dd-MM-yyyy HH:mm').format(now);
+    var sendTime = DateFormat('kk:mm:ss').format(DateTime.now());
+    var sendDate = DateFormat('dd-MM-yyyy').format(DateTime.now());
     Map<String, dynamic> chatData = {
       'sendBy': 'Administrator',
       'message': '${_auth.currentUser!.displayName} Leave group.',
       'time': FieldValue.serverTimestamp(),
-      'imgUrl': '',
-      'cread': '',
-      'ts': formatedDate,
       'type': 'notify',
-      'alias': '',
-      'messageId': '',
-      'status': '',
-      'statusTime': ''
+      'sendTime': sendTime,
+      'sendDate': sendDate
     };
     DatabaseMethods()
         .addMessage('groups', widget.groupId, newMessageId!, chatData);
@@ -264,6 +321,7 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
                                     borderRadius:
                                         BorderRadius.all(Radius.circular(10))),
                                 child: TextField(
+                                  autofocus: true,
                                   maxLines: null,
                                   controller: _editGroupName,
                                   style: const TextStyle(
@@ -293,18 +351,34 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
                                 color: const Color.fromARGB(255, 255, 255, 255),
                               ),
                               child: IconButton(
-                                color: const Color.fromARGB(255, 18, 86, 20),
-                                onPressed: () {
-                                  setState(() {
-                                    changeGroupName();
-                                  });
-                                },
-                                icon: const Icon(Icons.done, size: 20),
-                              ),
+                                  alignment: Alignment.center,
+                                  padding: const EdgeInsets.only(right: 1),
+                                  color: const Color.fromARGB(255, 18, 86, 20),
+                                  onPressed: () {
+                                    setState(() {
+                                      changeGroupName();
+                                    });
+                                  },
+                                  icon: Text(
+                                    String.fromCharCode(Icons.done.codePoint),
+                                    style: TextStyle(
+                                      inherit: false,
+                                      color:
+                                          const Color.fromARGB(255, 18, 86, 20),
+                                      fontSize: 20.0,
+                                      fontWeight: FontWeight.w900,
+                                      fontFamily: Icons.done.fontFamily,
+                                      package: Icons.done.fontPackage,
+                                    ),
+                                  )
+                                  // icon: const Icon(Icons.done,
+                                  //     size: 20, weight: 10),
+                                  ),
                             )
                           : const SizedBox(),
                       isEditGroupName
                           ? Container(
+                              alignment: Alignment.center,
                               width: size.width * 0.09,
                               decoration: BoxDecoration(
                                 border: Border.all(
@@ -315,14 +389,28 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
                                 color: const Color.fromARGB(255, 255, 255, 255),
                               ),
                               child: IconButton(
-                                color: const Color.fromARGB(255, 153, 26, 26),
-                                onPressed: () {
-                                  setState(() {
-                                    isEditGroupName = false;
-                                  });
-                                },
-                                icon: const Icon(Icons.close, size: 20),
-                              ),
+                                  alignment: Alignment.center,
+                                  padding: const EdgeInsets.only(right: 1),
+                                  color: const Color.fromARGB(255, 153, 26, 26),
+                                  onPressed: () {
+                                    setState(() {
+                                      isEditGroupName = false;
+                                    });
+                                  },
+                                  icon: Text(
+                                    String.fromCharCode(Icons.close.codePoint),
+                                    style: TextStyle(
+                                      inherit: false,
+                                      color: const Color.fromARGB(
+                                          255, 153, 26, 26),
+                                      fontSize: 20.0,
+                                      fontWeight: FontWeight.w900,
+                                      fontFamily: Icons.close.fontFamily,
+                                      package: Icons.close.fontPackage,
+                                    ),
+                                  )
+                                  //const Icon(Icons.close, size: 20),
+                                  ),
                             )
                           : logAsAdmin
                               ? Container(
@@ -367,13 +455,26 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
                                             .text, //widget.groupName,
                                         membersList: membersList,
                                       ))),
-                          leading: const Icon(
-                            Icons.add,
-                            color: Colors.black,
+                          leading: Text(
+                            String.fromCharCode(Icons.add.codePoint),
+                            style: TextStyle(
+                              inherit: false,
+                              color: const Color.fromARGB(255, 95, 57, 167),
+                              fontSize: 20.0,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: Icons.add.fontFamily,
+                              package: Icons.add.fontPackage,
+                            ),
                           ),
+                          // const Icon(
+                          //   Icons.add,
+                          //   color: Color.fromARGB(255, 95, 57, 167),
+                          // ),
                           title: const Text('Add Members',
                               style: TextStyle(
-                                  fontSize: 17, fontWeight: FontWeight.w500)),
+                                  color: Color.fromARGB(255, 95, 57, 167),
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700)),
                         )
                       : const SizedBox(),
                   const SizedBox(height: 8),
@@ -400,7 +501,7 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
                           ),
                           trailing: Row(
                             textBaseline: TextBaseline.ideographic,
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -414,7 +515,7 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
                               logAsAdmin
                                   ? membersList[index]['isAdmin'] == 'Admin'
                                       ? const Icon(Icons.close,
-                                          color: Colors.grey, size: 25)
+                                          color: Colors.grey, size: 23)
                                       : GestureDetector(
                                           onTap: () => showWarningDialog(
                                               "Remove member ${membersList[index]['Name']}?",
@@ -422,7 +523,7 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
                                               index),
                                           child: const Icon(Icons.close,
                                               color: Colors.redAccent,
-                                              size: 28),
+                                              size: 23),
                                         )
                                   : const SizedBox(),
                             ],
@@ -433,17 +534,19 @@ class _GroupMaintenanceState extends State<GroupMaintenance> {
                   ),
                   logAsAdmin
                       ? ListTile(
-                          onTap: (() {}),
+                          onTap: (() {
+                            showWDDialog(widget.groupId);
+                          }),
                           leading: const Icon(
-                            Icons.logout,
-                            color: Colors.grey,
+                            Icons.delete_outline,
+                            color: Colors.redAccent,
                           ),
                           title: Text(
-                            'Leave Group',
+                            'Delete Group',
                             style: TextStyle(
                               fontSize: size.width / 22,
                               fontWeight: FontWeight.w500,
-                              color: Colors.grey,
+                              color: Colors.redAccent,
                             ),
                           ),
                         )

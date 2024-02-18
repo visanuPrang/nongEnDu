@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:messagingapp/pages/signin.dart';
@@ -64,7 +65,8 @@ class _SignUpState extends State<SignUp> {
           'Photo':
               'https://img.freepik.com/premium-vector/cute-little-student-girl-cartoon_96373-287.jpg',
           'Id': uid,
-          'status': ''
+          'status': '',
+          'lastIn': FieldValue.serverTimestamp()
         };
         await DatabaseMethods().addUserDetails(userInfoMap, uid);
         await SharedPreferenceHelper().saveUserId(uid);
